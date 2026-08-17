@@ -1,9 +1,8 @@
 import Image from "next/image";
-import { Dumbbell, Users } from "lucide-react";
 import { brand } from "@/lib/config/brand";
-import { RoleCard } from "./role-card";
+import { LoginForm } from "./login-form";
 
-export function RoleSelectScreen() {
+export function LoginScreen() {
   const year = new Date().getFullYear();
 
   return (
@@ -28,24 +27,10 @@ export function RoleSelectScreen() {
         <p className="text-sm text-brand">{brand.subtitle}</p>
 
         <p className="mb-3 mt-10 text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Ingresá como
+          Ingresá a tu cuenta
         </p>
 
-        <div className="flex flex-col gap-3">
-          <RoleCard
-            href="/login/alumno"
-            icon={Dumbbell}
-            title="Alumno"
-            description="Ver rutinas y ejercicios del día"
-          />
-          <RoleCard
-            href="/login/profesor"
-            icon={Users}
-            title="Profesor"
-            description="Gestionar alumnos y rutinas"
-            variant="primary"
-          />
-        </div>
+        <LoginForm />
 
         <p className="mt-10 text-center text-xs text-ink-muted">
           Demo interactiva · {brand.name} © {year}

@@ -14,6 +14,8 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   prolijo por sobre completitud funcional.
 - Es un proyecto compartido con un amigo, no un side project individual — confirmar antes de
   decisiones de arquitectura o de producto no triviales, no asumir unilateralmente.
+- Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
+  `profesor`/`profesor` en `features/auth/demo-accounts.ts`) hasta que se integre Clerk.
 
 ## Prioridad #1: Mobile-first
 
@@ -64,6 +66,10 @@ código (no solo a futuro):
    branding).
 
 ## Roles del sistema
+
+El ingreso a la app es una **única pantalla de login** (usuario/contraseña), sin selector de rol
+previo: el rol queda determinado por qué credencial matchea (DNI+PIN de cliente vs. email+
+contraseña de profesor), no se le pregunta al usuario "¿sos alumno o profesor?".
 
 - **Profesor**: login email+contraseña. Busca clientes por DNI, asigna rutinas semanales.
 - **Cliente**: login simplificado DNI+PIN. Ve rutina activa, histórico reciente (peso/series/reps),

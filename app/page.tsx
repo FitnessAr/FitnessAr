@@ -1,5 +1,5 @@
-import { RoleSelectScreen } from "@/features/auth/role-select-screen";
+import { LoginScreen } from "@/features/auth/login-screen";
 
 export default function Home() {
-  return <RoleSelectScreen />;
+  return <LoginScreen />;
 }
