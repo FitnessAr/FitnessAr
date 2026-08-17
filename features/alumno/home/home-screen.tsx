@@ -1,18 +1,9 @@
 import { Bell, Flame } from "lucide-react";
+import { getInitials } from "@/lib/get-initials";
 import type { AlumnoHomeData } from "./types";
 import { WeekCalendar } from "./week-calendar";
 import { TodayWorkoutCard } from "./today-workout-card";
 import { WeeklySummary } from "./weekly-summary";
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 export function HomeScreen({ data }: { data: AlumnoHomeData }) {
   const { studentName, week, todayWorkout, weeklySummary } = data;

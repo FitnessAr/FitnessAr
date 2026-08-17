@@ -21,7 +21,7 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
 - Rutina del alumno (`/alumno/rutina`) implementada: nombre del programa, quién lo asignó y desde
   cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios (nombre +
   series x reps) del día de hoy. Progreso/Perfil siguen como stubs ("Próximamente") vía el nav
-  inferior de 4 pestañas (`features/alumno/bottom-nav.tsx`).
+  inferior de 4 pestañas.
 - La rutina activa del alumno (mock) vive en un solo lugar, `features/alumno/active-routine.ts`
   (`getActiveRoutine()`), y Home (`features/alumno/home/`), Rutina (`features/alumno/rutina/`) y
   el checklist de hoy (`features/alumno/session/`) arman su propio "view model" a partir de ahí —
@@ -30,7 +30,16 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
 - Checklist de hoy (`/alumno/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
   en Rutina): a propósito vive **fuera** del nav inferior de 4 pestañas (route group
   `app/alumno/(tabs)/` para Inicio/Rutina/Progreso/Perfil vs. `app/alumno/rutina/hoy/` aparte) —
-  es una pantalla de foco total tipo "iniciar entrenamiento", sin la barra de navegación.
+  es una pantalla de foco total tipo "iniciar entrenamiento", sin la barra de navegación. Durante
+  un descanso activo (`RestTimer`) se bloquea marcar cualquier otra serie salvo destildar la que
+  disparó ese descanso (por si fue un error).
+- Home (`/profesor`) y Alumnos (`/profesor/alumnos`) del profesor implementadas. El roster de
+  alumnos vive en un solo lugar, `features/profesor/roster.ts` (`getStudentRoster()`, con la regla
+  de negocio de "actividad"/"activo hoy" documentada ahí mismo), y Home deriva de ahí sus 3
+  métricas + la lista de activos hoy — no hay un mock aparte por pantalla. Rutinas/Perfil siguen
+  como stubs. El nav inferior (`components/bottom-nav.tsx`) y los helpers de iniciales/color por
+  hash (`lib/get-initials.ts`, `lib/color-hash.ts`) son compartidos entre alumno y profesor — no
+  duplicar por rol.
 
 ## Prioridad #1: Mobile-first
 
