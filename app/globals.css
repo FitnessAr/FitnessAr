@@ -12,6 +12,8 @@
   --ink-muted: #9a9ba3;
   --border: #26282e;
   --danger: #ff5c5c;
+  --info: #4fc3f7;
+  --flame: #ff8a3d;
 }
 
 @theme inline {
@@ -25,6 +27,8 @@
   --color-ink-muted: var(--ink-muted);
   --color-border: var(--border);
   --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-flame: var(--flame);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

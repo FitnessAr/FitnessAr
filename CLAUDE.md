@@ -16,6 +16,12 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   decisiones de arquitectura o de producto no triviales, no asumir unilateralmente.
 - Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
   `profesor`/`profesor` en `features/auth/demo-accounts.ts`) hasta que se integre Clerk.
+- Home del alumno (`/alumno`) implementada con datos de fecha reales (no fija) — el día "hoy" del
+  mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado. Todo
+  el dato mockeado (nombre, rutina asignada por día, resumen semanal) está aislado en
+  `features/alumno/home/get-alumno-home-data.ts`, la única función a reemplazar por una consulta
+  real (Prisma) — los componentes de UI no cambian. Rutina/Progreso/Perfil son stubs navegables
+  ("Próximamente") vía el nav inferior de 4 pestañas (`features/alumno/bottom-nav.tsx`).
 
 ## Prioridad #1: Mobile-first
 

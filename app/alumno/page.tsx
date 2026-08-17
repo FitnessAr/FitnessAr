@@ -1,17 +1,7 @@
-import Link from "next/link";
+import { getAlumnoHomeData } from "@/features/alumno/home/get-alumno-home-data";
+import { HomeScreen } from "@/features/alumno/home/home-screen";
 
-export default function AlumnoPage() {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-      <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink">
-        Bienvenido, alumno
-      </h1>
-      <p className="text-sm text-ink-muted">
-        Acá va a vivir la rutina activa y el histórico — próximamente.
-      </p>
-      <Link href="/" className="text-sm font-semibold text-brand">
-        Cerrar sesión
-      </Link>
-    </div>
-  );
+export default async function AlumnoHomePage() {
+  const data = await getAlumnoHomeData();
+  return <HomeScreen data={data} />;
 }
