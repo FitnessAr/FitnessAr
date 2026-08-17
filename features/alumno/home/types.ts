@@ -1,9 +1,6 @@
-export type WeekDay = {
-  date: Date;
-  label: string;
-  isToday: boolean;
-  hasWorkout: boolean;
-};
+import type { WeekDay } from "../week";
+
+export type { WeekDay };
 
 export type TodayWorkout = {
   routineName: string;

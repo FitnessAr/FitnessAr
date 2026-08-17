@@ -43,7 +43,7 @@ export function TodayWorkoutCard({ workout }: { workout: TodayWorkout }) {
       </div>
 
       <Link
-        href="/alumno/rutina"
+        href="/alumno/rutina/hoy"
         className="mt-5 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-brand text-base font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80"
       >
         Comenzar entrenamiento

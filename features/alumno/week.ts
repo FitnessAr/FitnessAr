@@ -1,4 +1,9 @@
-import type { WeekDay } from "./types";
+export type WeekDay = {
+  date: Date;
+  label: string;
+  isToday: boolean;
+  hasWorkout: boolean;
+};
 
 const DAY_LABELS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
 

@@ -31,7 +31,7 @@ export function WeeklySummary({ summary }: { summary: WeeklySummaryData }) {
       {tiles.map((tile) => (
         <div
           key={tile.key}
-          className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-surface px-2 py-4 text-center"
+          className="flex flex-col items-center gap-0 rounded-2xl border border-border bg-surface px-2 py-2 text-center"
         >
           <tile.icon className={`h-5 w-5 ${tile.colorClassName}`} />
           <span className="text-xl font-black text-ink">{tile.value}</span>

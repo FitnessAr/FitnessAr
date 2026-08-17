@@ -60,7 +60,7 @@ export function HomeScreen({ data }: { data: AlumnoHomeData }) {
         <TodayWorkoutCard workout={todayWorkout} />
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
           Resumen semanal
         </p>

@@ -17,11 +17,20 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
 - Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
   `profesor`/`profesor` en `features/auth/demo-accounts.ts`) hasta que se integre Clerk.
 - Home del alumno (`/alumno`) implementada con datos de fecha reales (no fija) — el día "hoy" del
-  mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado. Todo
-  el dato mockeado (nombre, rutina asignada por día, resumen semanal) está aislado en
-  `features/alumno/home/get-alumno-home-data.ts`, la única función a reemplazar por una consulta
-  real (Prisma) — los componentes de UI no cambian. Rutina/Progreso/Perfil son stubs navegables
-  ("Próximamente") vía el nav inferior de 4 pestañas (`features/alumno/bottom-nav.tsx`).
+  mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado.
+- Rutina del alumno (`/alumno/rutina`) implementada: nombre del programa, quién lo asignó y desde
+  cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios (nombre +
+  series x reps) del día de hoy. Progreso/Perfil siguen como stubs ("Próximamente") vía el nav
+  inferior de 4 pestañas (`features/alumno/bottom-nav.tsx`).
+- La rutina activa del alumno (mock) vive en un solo lugar, `features/alumno/active-routine.ts`
+  (`getActiveRoutine()`), y Home (`features/alumno/home/`), Rutina (`features/alumno/rutina/`) y
+  el checklist de hoy (`features/alumno/session/`) arman su propio "view model" a partir de ahí —
+  es la única función a reemplazar por una consulta real (Prisma) cuando esté el backend; los
+  componentes de UI no cambian.
+- Checklist de hoy (`/alumno/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
+  en Rutina): a propósito vive **fuera** del nav inferior de 4 pestañas (route group
+  `app/alumno/(tabs)/` para Inicio/Rutina/Progreso/Perfil vs. `app/alumno/rutina/hoy/` aparte) —
+  es una pantalla de foco total tipo "iniciar entrenamiento", sin la barra de navegación.
 
 ## Prioridad #1: Mobile-first
 
