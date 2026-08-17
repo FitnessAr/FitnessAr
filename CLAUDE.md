@@ -109,3 +109,4 @@ de entrenamiento previo.
   hardcodeada a uno), priorizando componentes simples y reutilizables.
 - Mantener este archivo actualizado a medida que se tomen decisiones de producto o técnicas
   (ej. cuando se defina la recuperación de acceso, o se agregue el schema de Prisma).
+- Debe ser una PWA que priorice la idea de aplicación, aunque en el fondo sea un sitio web.
