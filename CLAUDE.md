@@ -22,10 +22,14 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios (nombre +
   series x reps) del día de hoy. Progreso/Perfil siguen como stubs ("Próximamente") vía el nav
   inferior de 4 pestañas.
-- La rutina activa del alumno (mock) vive en un solo lugar, `features/alumno/active-routine.ts`
-  (`getActiveRoutine()`), y Home (`features/alumno/home/`), Rutina (`features/alumno/rutina/`) y
-  el checklist de hoy (`features/alumno/session/`) arman su propio "view model" a partir de ahí —
-  es la única función a reemplazar por una consulta real (Prisma) cuando esté el backend; los
+- El catálogo de rutinas (mock) vive en un solo lugar, `features/routines/catalog.ts`
+  (`getRoutineCatalog()`) — hoy tiene "Fuerza Total" y "Cardio y Tonificación". El alumno
+  (`features/alumno/active-routine.ts`) resuelve cuál le corresponde a la alumna logueada de la
+  demo ("Valentina Ruiz", asignada a Fuerza Total) y le suma `assignedBy`/`assignedSince`; Home
+  (`features/alumno/home/`), Rutina (`features/alumno/rutina/`) y el checklist de hoy
+  (`features/alumno/session/`) arman su propio "view model" a partir de eso. La pestaña Rutinas del
+  profesor (`features/profesor/rutinas/`) cruza el mismo catálogo con el roster de alumnos para
+  contar asignaciones — es la única fuente a reemplazar por Prisma cuando esté el backend; los
   componentes de UI no cambian.
 - Checklist de hoy (`/alumno/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
   en Rutina): a propósito vive **fuera** del nav inferior de 4 pestañas (route group
@@ -33,13 +37,16 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   es una pantalla de foco total tipo "iniciar entrenamiento", sin la barra de navegación. Durante
   un descanso activo (`RestTimer`) se bloquea marcar cualquier otra serie salvo destildar la que
   disparó ese descanso (por si fue un error).
-- Home (`/profesor`) y Alumnos (`/profesor/alumnos`) del profesor implementadas. El roster de
-  alumnos vive en un solo lugar, `features/profesor/roster.ts` (`getStudentRoster()`, con la regla
-  de negocio de "actividad"/"activo hoy" documentada ahí mismo), y Home deriva de ahí sus 3
-  métricas + la lista de activos hoy — no hay un mock aparte por pantalla. Rutinas/Perfil siguen
-  como stubs. El nav inferior (`components/bottom-nav.tsx`) y los helpers de iniciales/color por
-  hash (`lib/get-initials.ts`, `lib/color-hash.ts`) son compartidos entre alumno y profesor — no
-  duplicar por rol.
+- Home (`/profesor`), Alumnos (`/profesor/alumnos`) y Rutinas (`/profesor/rutinas`) del profesor
+  implementadas. El roster de alumnos vive en un solo lugar, `features/profesor/roster.ts`
+  (`getStudentRoster()`, con la regla de negocio de "actividad"/"activo hoy" documentada ahí
+  mismo), y Home deriva de ahí sus 3 métricas + la lista de activos hoy — no hay un mock aparte por
+  pantalla. Rutinas cruza `getStudentRoster()` con `getRoutineCatalog()` para contar alumnos
+  asignados por rutina. "+ Nueva rutina" (Home y Rutinas) apunta al stub
+  `/profesor/rutinas/nueva`, fuera del route group `(tabs)` (mismo criterio que
+  `/alumno/rutina/hoy`). Perfil sigue como stub. El nav inferior (`components/bottom-nav.tsx`) y
+  los helpers de iniciales/color por hash (`lib/get-initials.ts`, `lib/color-hash.ts`) son
+  compartidos entre alumno y profesor — no duplicar por rol.
 
 ## Prioridad #1: Mobile-first
 

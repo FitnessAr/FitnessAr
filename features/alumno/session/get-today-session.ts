@@ -16,7 +16,7 @@ export async function getTodaySession(): Promise<SessionData> {
     title: dayWorkout.title,
     exerciseCount: dayWorkout.exerciseCount,
     durationMinutes: dayWorkout.durationMinutes,
-    difficulty: dayWorkout.difficulty,
+    difficulty: routine.difficulty,
     exercises: dayWorkout.exercises,
   };
 }

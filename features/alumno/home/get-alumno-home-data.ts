@@ -16,12 +16,12 @@ export async function getAlumnoHomeData(): Promise<AlumnoHomeData> {
         title: dayWorkout.title,
         exerciseCount: dayWorkout.exerciseCount,
         durationMinutes: dayWorkout.durationMinutes,
-        difficulty: dayWorkout.difficulty,
+        difficulty: routine.difficulty,
       }
     : null;
 
   return {
-    studentName: "Sofía",
+    studentName: "Valentina Ruiz",
     week,
     todayWorkout,
     weeklySummary: {

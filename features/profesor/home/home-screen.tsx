@@ -43,7 +43,7 @@ export function HomeScreen({ data }: { data: ProfesorHomeData }) {
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Link
-            href="/profesor/rutinas"
+            href="/profesor/rutinas/nueva"
             className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-brand text-sm font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80"
           >
             <Plus className="h-4 w-4" />

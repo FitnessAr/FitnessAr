@@ -1,10 +1,7 @@
-export default function RutinasPage() {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 pb-24 text-center">
-      <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink">
-        Rutinas
-      </h1>
-      <p className="text-sm text-ink-muted">Próximamente.</p>
-    </div>
-  );
+import { getRutinasData } from "@/features/profesor/rutinas/get-rutinas-data";
+import { RutinasScreen } from "@/features/profesor/rutinas/rutinas-screen";
+
+export default async function RutinasPage() {
+  const data = await getRutinasData();
+  return <RutinasScreen data={data} />;
 }
