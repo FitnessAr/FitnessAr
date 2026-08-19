@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
+import { SESSION_COOKIE_NAME } from "./session-cookie";
 
 export function LoginForm() {
   const router = useRouter();
@@ -15,11 +16,12 @@ export function LoginForm() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const account =
-      DEMO_ACCOUNTS[identifier.trim().toLowerCase() as keyof typeof DEMO_ACCOUNTS];
+    const accountId = identifier.trim().toLowerCase();
+    const account = DEMO_ACCOUNTS[accountId as keyof typeof DEMO_ACCOUNTS];
 
     if (account && account.password === password) {
       setError("");
+      document.cookie = `${SESSION_COOKIE_NAME}=${accountId}; path=/`;
       router.push(account.redirectTo);
       return;
     }

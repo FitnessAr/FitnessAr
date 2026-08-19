@@ -18,9 +18,12 @@ export type WeeklySummary = {
   streakDays: number;
 };
 
-export type AlumnoHomeData = {
-  studentName: string;
-  week: WeekDay[];
-  todayWorkout: TodayWorkout;
-  weeklySummary: WeeklySummary;
-};
+export type AlumnoHomeData =
+  | { studentName: string; hasProfessor: false }
+  | {
+      studentName: string;
+      hasProfessor: true;
+      week: WeekDay[];
+      todayWorkout: TodayWorkout;
+      weeklySummary: WeeklySummary;
+    };

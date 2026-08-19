@@ -1,6 +1,7 @@
 import type { RutinaScreenData } from "./types";
 import { DayRow } from "./day-row";
 import { ExerciseList } from "./exercise-list";
+import { NoProfessorMessage } from "../no-professor-message";
 
 function formatAssignedSince(date: Date): string {
   return new Intl.DateTimeFormat("es-AR", {
@@ -10,6 +11,10 @@ function formatAssignedSince(date: Date): string {
 }
 
 export function RutinaScreen({ data }: { data: RutinaScreenData }) {
+  if (!data) {
+    return <NoProfessorMessage label="Mi rutina" />;
+  }
+
   const { routineName, assignedBy, assignedSince, week, todayExercises } = data;
 
   return (

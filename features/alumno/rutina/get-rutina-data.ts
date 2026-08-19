@@ -4,6 +4,11 @@ import type { RutinaScreenData } from "./types";
 
 export async function getRutinaData(): Promise<RutinaScreenData> {
   const routine = await getActiveRoutine();
+
+  if (!routine) {
+    return null;
+  }
+
   const today = new Date();
   const week = getCurrentWeekDays(routine.scheduleWeekdays, today).map((day) => ({
     ...day,

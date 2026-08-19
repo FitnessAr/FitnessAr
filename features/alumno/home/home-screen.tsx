@@ -4,9 +4,10 @@ import type { AlumnoHomeData } from "./types";
 import { WeekCalendar } from "./week-calendar";
 import { TodayWorkoutCard } from "./today-workout-card";
 import { WeeklySummary } from "./weekly-summary";
+import { NoProfessorAssigned } from "./no-professor-assigned";
 
 export function HomeScreen({ data }: { data: AlumnoHomeData }) {
-  const { studentName, week, todayWorkout, weeklySummary } = data;
+  const { studentName } = data;
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8">
@@ -25,38 +26,44 @@ export function HomeScreen({ data }: { data: AlumnoHomeData }) {
         </div>
       </header>
 
-      <div className="flex items-center gap-4 rounded-2xl border border-brand/20 bg-brand/10 px-4 py-4">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-flame/15 text-flame">
-          <Flame className="h-6 w-6" />
-        </span>
-        <div>
-          <p className="font-extrabold text-ink">
-            ¡{weeklySummary.streakDays} días seguidos entrenando!
-          </p>
-          <p className="text-sm text-ink-muted">Seguí así, vas muy bien.</p>
-        </div>
-      </div>
+      {!data.hasProfessor ? (
+        <NoProfessorAssigned />
+      ) : (
+        <>
+          <div className="flex items-center gap-4 rounded-2xl border border-brand/20 bg-brand/10 px-4 py-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-flame/15 text-flame">
+              <Flame className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-extrabold text-ink">
+                ¡{data.weeklySummary.streakDays} días seguidos entrenando!
+              </p>
+              <p className="text-sm text-ink-muted">Seguí así, vas muy bien.</p>
+            </div>
+          </div>
 
-      <section className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Esta semana
-        </p>
-        <WeekCalendar week={week} />
-      </section>
+          <section className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+              Esta semana
+            </p>
+            <WeekCalendar week={data.week} />
+          </section>
 
-      <section className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Entrenamiento de hoy
-        </p>
-        <TodayWorkoutCard workout={todayWorkout} />
-      </section>
+          <section className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+              Entrenamiento de hoy
+            </p>
+            <TodayWorkoutCard workout={data.todayWorkout} />
+          </section>
 
-      <section className="flex flex-col gap-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Resumen semanal
-        </p>
-        <WeeklySummary summary={weeklySummary} />
-      </section>
+          <section className="flex flex-col gap-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+              Resumen semanal
+            </p>
+            <WeeklySummary summary={data.weeklySummary} />
+          </section>
+        </>
+      )}
     </div>
   );
 }

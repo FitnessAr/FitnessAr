@@ -158,7 +158,7 @@ export async function getRoutineCatalog(): Promise<RoutineTemplate[]> {
               ],
             },
             {
-              name: "Curl de bíceps",
+              name: "Curl de Bíceps",
               sets: 3,
               reps: "12",
               muscleGroup: "Bíceps",

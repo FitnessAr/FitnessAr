@@ -1,10 +1,7 @@
-export default function ProgresoPage() {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 pb-24 text-center">
-      <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink">
-        Progreso
-      </h1>
-      <p className="text-sm text-ink-muted">Próximamente.</p>
-    </div>
-  );
+import { getProgresoData } from "@/features/alumno/progreso/get-progreso-data";
+import { ProgresoScreen } from "@/features/alumno/progreso/progreso-screen";
+
+export default async function ProgresoPage() {
+  const data = await getProgresoData();
+  return <ProgresoScreen data={data} />;
 }

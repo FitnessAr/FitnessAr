@@ -7,4 +7,4 @@ export type RutinaScreenData = {
   assignedSince: Date;
   week: (WeekDay & { workout: DayWorkout })[];
   todayExercises: ExerciseSummary[];
-};
+} | null;

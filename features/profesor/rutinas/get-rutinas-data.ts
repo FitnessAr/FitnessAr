@@ -1,10 +1,15 @@
 import { getRoutineCatalog } from "@/features/routines/catalog";
 import { formatScheduleDays, getFirstScheduledWeekday } from "@/features/routines/format-schedule";
+import { getCurrentIdentity } from "@/features/auth/session";
 import { getStudentRoster } from "../roster";
 import type { RoutineCard, RutinasData } from "./types";
 
 export async function getRutinasData(): Promise<RutinasData> {
-  const [catalog, roster] = await Promise.all([getRoutineCatalog(), getStudentRoster()]);
+  const professorId = (await getCurrentIdentity()) ?? "profesor";
+  const [catalog, roster] = await Promise.all([
+    getRoutineCatalog(),
+    getStudentRoster(professorId),
+  ]);
 
   const routines: RoutineCard[] = catalog.map((routine) => {
     const firstWeekday = getFirstScheduledWeekday(routine.scheduleWeekdays);

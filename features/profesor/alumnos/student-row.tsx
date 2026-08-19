@@ -17,7 +17,9 @@ export function StudentRow({ student }: { student: Student }) {
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-ink">{student.name}</p>
-        <p className="truncate text-xs text-ink-muted">{student.routineName}</p>
+        <p className="truncate text-xs text-ink-muted">
+          {student.routineName ?? "Sin rutina asignada"}
+        </p>
       </div>
 
       <div className="shrink-0 text-right">

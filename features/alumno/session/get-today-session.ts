@@ -4,6 +4,11 @@ import type { SessionData } from "./types";
 
 export async function getTodaySession(): Promise<SessionData> {
   const routine = await getActiveRoutine();
+
+  if (!routine) {
+    return null;
+  }
+
   const today = new Date();
   const dayWorkout = routine.workoutsByWeekday[today.getDay()] ?? null;
 

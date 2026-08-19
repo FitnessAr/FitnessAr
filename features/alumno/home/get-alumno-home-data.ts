@@ -1,10 +1,15 @@
-import { getActiveRoutine } from "../active-routine";
+import { getActiveRoutine, getCurrentStudentName } from "../active-routine";
 import { getCurrentWeekDays } from "../week";
 import { WEEKDAY_NAMES_ES } from "../weekday-names";
 import type { AlumnoHomeData, TodayWorkout } from "./types";
 
 export async function getAlumnoHomeData(): Promise<AlumnoHomeData> {
-  const routine = await getActiveRoutine();
+  const [routine, studentName] = await Promise.all([getActiveRoutine(), getCurrentStudentName()]);
+
+  if (!routine) {
+    return { studentName, hasProfessor: false };
+  }
+
   const today = new Date();
   const week = getCurrentWeekDays(routine.scheduleWeekdays, today);
   const dayWorkout = routine.workoutsByWeekday[today.getDay()] ?? null;
@@ -21,7 +26,8 @@ export async function getAlumnoHomeData(): Promise<AlumnoHomeData> {
     : null;
 
   return {
-    studentName: "Valentina Ruiz",
+    studentName,
+    hasProfessor: true,
     week,
     todayWorkout,
     weeklySummary: {

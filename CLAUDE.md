@@ -15,22 +15,35 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
 - Es un proyecto compartido con un amigo, no un side project individual — confirmar antes de
   decisiones de arquitectura o de producto no triviales, no asumir unilateralmente.
 - Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
-  `profesor`/`profesor` en `features/auth/demo-accounts.ts`) hasta que se integre Clerk.
+  `alumno2`/`alumno2`, `profesor`/`profesor`, `profesor2`/`profesor2` en
+  `features/auth/demo-accounts.ts`) hasta que se integre Clerk. Existe una **sesión mínima real**
+  (`features/auth/session.ts`, `getCurrentIdentity()`) vía cookie no-httpOnly: el login guarda qué
+  cuenta entró y cada pantalla de alumno/profesor la lee para saber a quién mostrar, en vez de
+  tener un nombre hardcodeado por archivo. `alumno2`/`profesor2` son cuentas "vacías" (sin nadie
+  agendado entre sí) para poder mostrar el estado de un alumno sin profesor asignado. "Cerrar
+  sesión" (`features/auth/logout-link.tsx`) limpia esa cookie de verdad — si no, cambiar de cuenta
+  quedaría pegado a la anterior.
 - Home del alumno (`/alumno`) implementada con datos de fecha reales (no fija) — el día "hoy" del
   mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado.
 - Rutina del alumno (`/alumno/rutina`) implementada: nombre del programa, quién lo asignó y desde
   cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios (nombre +
-  series x reps) del día de hoy. Progreso/Perfil siguen como stubs ("Próximamente") vía el nav
-  inferior de 4 pestañas.
+  series x reps) del día de hoy.
 - El catálogo de rutinas (mock) vive en un solo lugar, `features/routines/catalog.ts`
-  (`getRoutineCatalog()`) — hoy tiene "Fuerza Total" y "Cardio y Tonificación". El alumno
-  (`features/alumno/active-routine.ts`) resuelve cuál le corresponde a la alumna logueada de la
-  demo ("Valentina Ruiz", asignada a Fuerza Total) y le suma `assignedBy`/`assignedSince`; Home
-  (`features/alumno/home/`), Rutina (`features/alumno/rutina/`) y el checklist de hoy
-  (`features/alumno/session/`) arman su propio "view model" a partir de eso. La pestaña Rutinas del
-  profesor (`features/profesor/rutinas/`) cruza el mismo catálogo con el roster de alumnos para
-  contar asignaciones — es la única fuente a reemplazar por Prisma cuando esté el backend; los
-  componentes de UI no cambian.
+  (`getRoutineCatalog()`) — hoy tiene "Fuerza Total" y "Cardio y Tonificación", global (no
+  segmentado por profesor todavía). El pool de alumnos (mock) también es neutral, vive en
+  `features/students/roster.ts` (`getAllStudents()`) — cada alumno tiene `assignedProfessorId`
+  (`null` si no tiene profesor todavía) y, si tiene login de demo, `loginId`. El alumno
+  (`features/alumno/active-routine.ts`) resuelve, según la identidad logueada, cuál rutina le
+  corresponde y le suma `assignedBy`/`assignedSince` — **devuelve `null` si no tiene profesor
+  asignado** (caso de `alumno2`/"Camila Ibáñez"), y ahí Home (`features/alumno/home/`) muestra la
+  pantalla "Aún no tenés entrenamientos asignados" (`no-professor-assigned.tsx`, con dos botones
+  todavía inactivos: "Unirme a un profesor" y "¿Cómo me uno a un profesor?" — la lógica de
+  aceptación profesor↔alumno queda para más adelante), Rutina (`features/alumno/rutina/`) muestra
+  un mensaje compacto, y el checklist de hoy (`features/alumno/session/`) redirige a Home. La
+  pestaña Rutinas del profesor (`features/profesor/rutinas/`) cruza el catálogo con
+  `features/profesor/roster.ts` (`getStudentRoster(professorId)`, que filtra el pool neutral por
+  profesor) para contar asignaciones — son las fuentes a reemplazar por Prisma cuando esté el
+  backend; los componentes de UI no cambian.
 - Checklist de hoy (`/alumno/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
   en Rutina): a propósito vive **fuera** del nav inferior de 4 pestañas (route group
   `app/alumno/(tabs)/` para Inicio/Rutina/Progreso/Perfil vs. `app/alumno/rutina/hoy/` aparte) —
@@ -38,15 +51,46 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   un descanso activo (`RestTimer`) se bloquea marcar cualquier otra serie salvo destildar la que
   disparó ese descanso (por si fue un error).
 - Home (`/profesor`), Alumnos (`/profesor/alumnos`) y Rutinas (`/profesor/rutinas`) del profesor
-  implementadas. El roster de alumnos vive en un solo lugar, `features/profesor/roster.ts`
-  (`getStudentRoster()`, con la regla de negocio de "actividad"/"activo hoy" documentada ahí
-  mismo), y Home deriva de ahí sus 3 métricas + la lista de activos hoy — no hay un mock aparte por
-  pantalla. Rutinas cruza `getStudentRoster()` con `getRoutineCatalog()` para contar alumnos
-  asignados por rutina. "+ Nueva rutina" (Home y Rutinas) apunta al stub
+  implementadas. `features/profesor/roster.ts` (`getStudentRoster(professorId)`) filtra el pool
+  neutral de alumnos (`features/students/roster.ts`, con la regla de negocio de "actividad"/"activo
+  hoy" documentada ahí mismo) por el profesor logueado — cada pantalla resuelve la identidad actual
+  vía `getCurrentIdentity()` antes de pedir el roster. Home deriva de ahí sus 3 métricas + la lista
+  de activos hoy — no hay un mock aparte por pantalla; con `profesor2` (sin alumnos) las 3 métricas
+  dan `0` sin lógica extra. Rutinas cruza ese roster filtrado con `getRoutineCatalog()` para contar
+  alumnos asignados por rutina. `features/profesor/professor.ts` (`getProfessorProfile(id)`)
+  soporta más de un profesor (hoy "Rodrigo Vega" y "Lucía Fernández"). "+ Nueva rutina" (Home y
+  Rutinas) apunta a
   `/profesor/rutinas/nueva`, fuera del route group `(tabs)` (mismo criterio que
-  `/alumno/rutina/hoy`). Perfil sigue como stub. El nav inferior (`components/bottom-nav.tsx`) y
-  los helpers de iniciales/color por hash (`lib/get-initials.ts`, `lib/color-hash.ts`) son
-  compartidos entre alumno y profesor — no duplicar por rol.
+  `/alumno/rutina/hoy`) — implementada como formulario interactivo
+  (`features/profesor/rutinas/nueva/`): nombre editable, selector de días (pills tocables,
+  convención `Date.getDay()` de `features/routines/catalog.ts`), sección de ejercicios vacía
+  (arranca en 0, sin precargar nada) con "Agregar ejercicio" inactivo, y "Asignar alumnos" sobre
+  el roster (muestra `routineName` actual de cada alumno como subtítulo en vez de un "nivel"
+  inventado, mismo criterio que la pestaña Alumnos). "Guardar rutina" es **solo visual** por ahora:
+  vuelve a la lista sin crear nada en el catálogo — pendiente resolver junto con el alta real de
+  ejercicios. Perfil (`/profesor/perfil`, `features/profesor/perfil/`) implementado:
+  avatar + nombre, y una lista Horario/Alumnos/Rutinas (título izquierda, dato derecha) — sin datos
+  de relleno tipo especialidad/certificación/gimnasio. La identidad del profesor logueado
+  (nombre, horario) vive en `features/profesor/professor.ts`, consumida tanto por Home como por
+  Perfil. "Cerrar sesión" usa `features/auth/logout-link.tsx` (mismo componente que el stub de
+  Perfil del alumno) para limpiar la cookie de sesión de verdad. El nav inferior
+  (`components/bottom-nav.tsx`) y los helpers de iniciales/color por hash
+  (`lib/get-initials.ts`, `lib/color-hash.ts`) son compartidos entre alumno y profesor — no
+  duplicar por rol.
+- Perfil del alumno (`/alumno/perfil`, `features/alumno/perfil/`) implementado: avatar + nombre,
+  y una lista Profesor asignado/Rutina activa/Miembro desde/Próximo entrenamiento (título
+  izquierda, dato derecha, mismo lenguaje visual que el Perfil del profesor) — sin subtítulo de
+  "nivel" ni stat-tiles de relleno. Progreso (`/alumno/progreso`, `features/alumno/progreso/`)
+  implementado: actividad semanal (check por día completo), 4 métricas (entrenamientos del mes,
+  racha actual, tiempo total del mes, ejercicios de hoy) y récords personales. Sigue siendo
+  **mock** — no se conecta con lo que se tilda en el checklist (`/alumno/rutina/hoy`, que no
+  persiste nada todavía) — pero la lógica de negocio es real: `features/alumno/progreso/
+  training-log.ts` genera un historial de sesiones relativo a "hoy" (con un hueco deliberado a
+  mitad de camino, para poder probar que el corte de racha funciona) y
+  `get-progreso-data.ts` calcula todo sobre ese historial (racha = días programados consecutivos
+  completados, sin que un día de descanso la corte; récords = 1RM estimado por fórmula de Epley,
+  ver nota de alcance más abajo). Ambas pantallas, sin profesor asignado, reusan el mismo mensaje
+  compacto de Rutina (`features/alumno/no-professor-message.tsx`).
 
 ## Prioridad #1: Mobile-first
 
@@ -120,7 +164,9 @@ contraseña de profesor), no se le pregunta al usuario "¿sos alumno o profesor?
 
 - Tipificación de rutinas (hipertrofia, fuerza, resistencia, descarga).
 - Autogestión de rutinas por el cliente.
-- Métricas avanzadas / cálculo de 1RM.
+- Métricas avanzadas — sí se usa el 1RM estimado (fórmula de Epley) puntualmente para ordenar
+  "récords personales" en Progreso del alumno, por pedido explícito del usuario (ver "Estado
+  actual"); lo que sigue fuera de alcance es un módulo de métricas avanzadas más amplio.
 - Módulo de comunicación y noticias del gimnasio.
 
 ## Decisiones de negocio pendientes
