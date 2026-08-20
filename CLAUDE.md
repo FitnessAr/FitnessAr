@@ -16,7 +16,10 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   decisiones de arquitectura o de producto no triviales, no asumir unilateralmente.
 - Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
   `alumno2`/`alumno2`, `profesor`/`profesor`, `profesor2`/`profesor2` en
-  `features/auth/demo-accounts.ts`) hasta que se integre Clerk. Existe una **sesión mínima real**
+  `features/auth/demo-accounts.ts`) hasta que se conecte la autenticación propia real (decidido:
+  sin Clerk — ver "Roles del sistema" y "Stack técnico"; falta sumar la cuenta `admin`/`admin` al
+  mock y el panel de administrador cuando se planifique esa pantalla). Existe una **sesión mínima
+  real**
   (`features/auth/session.ts`, `getCurrentIdentity()`) vía cookie no-httpOnly: el login guarda qué
   cuenta entró y cada pantalla de alumno/profesor la lee para saber a quién mostrar, en vez de
   tener un nombre hardcodeado por archivo. `alumno2`/`profesor2` son cuentas "vacías" (sin nadie
@@ -137,8 +140,8 @@ código (no solo a futuro):
    señal de generalizar esa pieza en el core — un fork divide el mantenimiento y frena la
    propagación de fixes a los demás clientes.
 7. Cuando exista el primer cliente real, documentar acá un checklist repetible para levantar una
-   instancia nueva (proyecto Supabase, app Clerk, config Cloudinary, env vars, seed de catálogo y
-   branding).
+   instancia nueva (proyecto Supabase, config Cloudinary, env vars, seed de catálogo, branding, y
+   alta de la primera cuenta de administrador de esa instancia).
 
 ## Roles del sistema
 
@@ -151,6 +154,18 @@ contraseña de profesor), no se le pregunta al usuario "¿sos alumno o profesor?
   comentarios del profesor.
 - **Administrador de gimnasio**: login con credenciales. Gestiona catálogo de ejercicios de la
   sucursal y alta de profesores.
+
+**Autenticación (decidido — sin Clerk):** login propio construido en el proyecto, usuario y
+contraseña. Cuentas iniciales de cada instancia (seed): un admin, y al menos un profesor y un
+cliente de ejemplo. A partir de ahí:
+- Solo el **administrador** puede crear cuentas nuevas, y únicamente con rol Profesor o
+  Administrador (no crea cuentas de Cliente — el alta de Cliente es un camino aparte, todavía sin
+  definir del todo: ver "Decisiones de negocio pendientes").
+- Solo el **administrador** puede eliminar cuentas, de cualquier rol (incluida otra cuenta de
+  administrador).
+- Pantalla de gestión de cuentas (alta/baja) del administrador: todavía sin diseñar — falta pasar
+  por el mismo proceso de planeamiento que el resto de las pantallas (captura de referencia +
+  plan) antes de implementarla.
 
 ## Alcance del MVP
 
@@ -174,11 +189,18 @@ contraseña de profesor), no se le pregunta al usuario "¿sos alumno o profesor?
 - Recuperación de acceso del cliente (login DNI+PIN): sin definir todavía. Opciones que el usuario
   está evaluando: recuperación por teléfono, o gestión manual vía administrador. No implementar un
   mecanismo propio sin confirmar cuál eligieron.
+- Alta de cuentas de Cliente: el administrador **no** las crea (solo crea Profesor/Administrador —
+  ver "Roles del sistema"). El camino real de alta de Cliente todavía no está definido — candidatos
+  vistos hasta ahora en la demo: que el propio alumno se una a un profesor (botón "Unirme a un
+  profesor", hoy inactivo en `no-professor-assigned.tsx`) y/o que el profesor dé de alta al
+  cliente. No asumir cuál sin confirmar.
 
 ## Stack técnico
 
-Next.js (App Router) + TypeScript + Tailwind · PostgreSQL vía Supabase · Prisma como ORM · Clerk
-para autenticación y roles · Cloudinary para media de ejercicios · Vercel para deploy.
+Next.js (App Router) + TypeScript + Tailwind · PostgreSQL vía Supabase · Prisma como ORM ·
+**autenticación propia** (usuario/contraseña + roles + sesión, todo construido en el proyecto —
+decidido explícitamente en contra de usar Clerk) · Cloudinary para media de ejercicios · Vercel
+para deploy.
 
 Este proyecto corre sobre Next.js 16.x — ver `AGENTS.md` (importado arriba): antes de escribir
 código de Next.js, revisar `node_modules/next/dist/docs/` por breaking changes vs. conocimiento
