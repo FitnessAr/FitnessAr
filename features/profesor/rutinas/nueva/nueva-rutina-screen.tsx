@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, X } from "lucide-react";
-import type { Student } from "../../roster";
-import { AssignStudentRow } from "./assign-student-row";
+import type { Client } from "../../roster";
+import { AssignClientRow } from "./assign-client-row";
 
 // Convención Date.getDay() (0 = domingo ... 6 = sábado), orden lunes-primero para mostrar.
 const WEEKDAYS = [
@@ -17,10 +17,10 @@ const WEEKDAYS = [
   { value: 0, label: "Dom" },
 ];
 
-export function NuevaRutinaScreen({ roster }: { roster: Student[] }) {
+export function NuevaRutinaScreen({ roster }: { roster: Client[] }) {
   const [name, setName] = useState("");
   const [selectedWeekdays, setSelectedWeekdays] = useState<Set<number>>(new Set());
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
 
   function toggleWeekday(value: number) {
     setSelectedWeekdays((current) => {
@@ -34,13 +34,13 @@ export function NuevaRutinaScreen({ roster }: { roster: Student[] }) {
     });
   }
 
-  function toggleStudent(studentName: string) {
-    setSelectedStudents((current) => {
+  function toggleClient(clientName: string) {
+    setSelectedClients((current) => {
       const next = new Set(current);
-      if (next.has(studentName)) {
-        next.delete(studentName);
+      if (next.has(clientName)) {
+        next.delete(clientName);
       } else {
-        next.add(studentName);
+        next.add(clientName);
       }
       return next;
     });
@@ -107,15 +107,15 @@ export function NuevaRutinaScreen({ roster }: { roster: Student[] }) {
 
       <section className="flex flex-col gap-3">
         <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-          Asignar alumnos
+          Asignar clientes
         </p>
         <div className="flex flex-col gap-2">
-          {roster.map((student) => (
-            <AssignStudentRow
-              key={student.name}
-              student={student}
-              selected={selectedStudents.has(student.name)}
-              onToggle={() => toggleStudent(student.name)}
+          {roster.map((client) => (
+            <AssignClientRow
+              key={client.name}
+              client={client}
+              selected={selectedClients.has(client.name)}
+              onToggle={() => toggleClient(client.name)}
             />
           ))}
         </div>

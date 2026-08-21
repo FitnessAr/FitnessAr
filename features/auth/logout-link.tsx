@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { SESSION_COOKIE_NAME } from "./session-cookie";
+import { useRouter } from "next/navigation";
+import type { MouseEvent, ReactNode } from "react";
+import { logoutAction } from "./logout";
 
 export function LogoutLink({ className, children }: { className?: string; children: ReactNode }) {
+  const router = useRouter();
+
+  async function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    await logoutAction();
+    router.push("/");
+  }
+
   return (
-    <Link
-      href="/"
-      className={className}
-      onClick={() => {
-        document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0`;
-      }}
-    >
+    <Link href="/" className={className} onClick={handleClick}>
       {children}
     </Link>
   );

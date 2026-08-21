@@ -5,7 +5,7 @@ export type ExerciseSummary = {
   muscleGroup: string;
   restSeconds: number;
   // Peso × reps de la última sesión, una entrada por set (mismo orden). Mock de demo — en el
-  // producto real sale del histórico de sesiones del alumno para ese ejercicio.
+  // producto real sale del histórico de sesiones del cliente para ese ejercicio.
   previousSets: { weight: number; reps: number }[];
 };
 
@@ -25,7 +25,7 @@ export type RoutineTemplate = {
 };
 
 // Mock de demo — reemplazar por una consulta real (Prisma) cuando esté el backend.
-// Catálogo de rutinas del profesor: fuente única tanto para el alumno (features/alumno/active-
+// Catálogo de rutinas del profesor: fuente única tanto para el cliente (features/cliente/active-
 // routine.ts resuelve cuál le corresponde) como para la pestaña Rutinas del profesor.
 export async function getRoutineCatalog(): Promise<RoutineTemplate[]> {
   return [

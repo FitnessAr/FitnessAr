@@ -3,11 +3,11 @@ import { LogoutLink } from "@/features/auth/logout-link";
 import type { ProfesorPerfilData } from "./types";
 
 export function PerfilScreen({ data }: { data: ProfesorPerfilData }) {
-  const { professorName, schedule, totalStudents, totalRoutines } = data;
+  const { professorName, schedule, totalClients, totalRoutines } = data;
 
   const details = [
     { label: "Horario", value: schedule },
-    { label: "Alumnos", value: totalStudents },
+    { label: "Clientes", value: totalClients },
     { label: "Rutinas", value: totalRoutines },
   ];
 

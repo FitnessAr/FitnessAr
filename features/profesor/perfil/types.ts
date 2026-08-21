@@ -1,6 +1,6 @@
 export type ProfesorPerfilData = {
   professorName: string;
   schedule: string;
-  totalStudents: number;
+  totalClients: number;
   totalRoutines: number;
 };

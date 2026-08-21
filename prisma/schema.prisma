@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  ADMIN
+  PROFESOR
+  CLIENTE
+}
+
+enum RepsUnit {
+  REPS
+  SECONDS
+}
+
+enum Difficulty {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+}
+
+// ==========================================
+// SUCURSAL
+// ==========================================
+// Sin modelo Gym: cada gimnasio cliente es una instancia con su propia base de datos
+// (deploy separado), así que "a qué gimnasio pertenece esto" ya lo resuelve la infraestructura,
+// no hace falta una tabla con una sola fila para eso. Branch queda como techo de la jerarquía
+// dentro de esta base.
+
+model Branch {
+  id        String     @id @default(cuid())
+  name      String     @db.VarChar(255)
+  users     User[]
+  exercises Exercise[]
+  routines  Routine[]
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("branches")
+}
+
+// ==========================================
+// USUARIOS Y PERFILES (AUTH PROPIA)
+// ==========================================
+// loginId guarda el DNI para los tres roles (Admin, Profesor, Cliente comparten el mismo
+// mecanismo: DNI + contraseña) — excepción: la cuenta de bootstrap (nombre "admin"), cuyo loginId
+// ("12345678") es un DNI fijo elegido a propósito, no el documento real de nadie, ver CLAUDE.md.
+// passwordHash es el mismo campo/hash
+// para los tres roles también, sin distinción especial ("PIN" de Cliente y "contraseña" de
+// Profesor/Admin son el mismo mecanismo).
+//
+// deactivatedAt: el admin nunca borra cuentas de verdad ("eliminar" = desactivar). Una cuenta
+// desactivada no puede loguear y desaparece de los listados activos, pero su perfil, rutinas
+// creadas e historial de entrenamientos se conservan intactos — reversible si fue un error o la
+// persona vuelve más adelante.
+
+model User {
+  id                  String    @id @default(cuid())
+  branchId            String    @map("branch_id")
+  role                Role
+  loginId             String?   @map("login_id")
+  passwordHash        String?   @map("password_hash") @db.VarChar(255)
+  email               String?   @unique @db.VarChar(255)
+  name                String    @db.VarChar(255)
+  deactivatedAt       DateTime? @map("deactivated_at")
+  // Límite de intentos de login: 5 fallos seguidos bloquean esta cuenta puntual por 1 minuto
+  // (lockedUntil), no una IP — ver authenticateRealUser. failedLoginAttempts se resetea a 0 en
+  // cualquier login exitoso o al cumplirse el bloqueo.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  branch              Branch    @relation(fields: [branchId], references: [id])
+  profesor            Profesor?
+  cliente             Cliente?
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@unique([branchId, loginId])
+  @@index([branchId])
+  @@map("users")
+}
+
+model Profesor {
+  id        String    @id @default(cuid())
+  userId    String    @unique @map("user_id")
+  schedule  String?   @db.VarChar(255)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientes  Cliente[]
+  routines  Routine[]
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("profesores")
+}
+
+model Cliente {
+  id                String            @id @default(cuid())
+  userId            String            @unique @map("user_id")
+  memberSince       DateTime          @map("member_since")
+  profesorId        String?           @map("profesor_id")
+  routineId         String?           @map("routine_id")
+  routineAssignedAt DateTime?         @map("routine_assigned_at")
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profesor          Profesor?         @relation(fields: [profesorId], references: [id], onDelete: SetNull)
+  routine           Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  sessions          TrainingSession[]
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  @@index([profesorId])
+  @@index([routineId])
+  @@map("clientes")
+}
+
+// ==========================================
+// CATÁLOGO LOCAL
+// ==========================================
+
+model Exercise {
+  id               String            @id @default(cuid())
+  branchId         String            @map("branch_id")
+  catalogId        String            @map("catalog_id") @db.VarChar(10)
+  name             String            @db.VarChar(255)
+  category         String?           @db.VarChar(100)
+  bodyPart         String?           @map("body_part") @db.VarChar(100)
+  equipment        String?           @db.VarChar(100)
+  muscleGroup      String?           @map("muscle_group") @db.VarChar(100)
+  target           String?           @db.VarChar(100)
+  secondaryMuscles Json?             @map("secondary_muscles")
+  instructionSteps Json?             @map("instruction_steps")
+  image            String?           @db.VarChar(500)
+  gifUrl           String?           @map("gif_url") @db.VarChar(500)
+  attribution      String?           @db.VarChar(500)
+  branch           Branch            @relation(fields: [branchId], references: [id])
+  routineExercises RoutineExercise[]
+  sessionExercises SessionExercise[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+
+  @@unique([branchId, catalogId])
+  @@index([branchId])
+  @@index([category])
+  @@index([muscleGroup])
+  @@map("exercises")
+}
+
+// ==========================================
+// PLANIFICACIÓN DE RUTINAS
+// ==========================================
+// Routine.profesorId es nullable (onDelete: SetNull) a propósito: si el profesor que la creó deja
+// de trabajar en el gimnasio, la rutina sigue existiendo y asignable — solo pierde el autor.
+
+model Routine {
+  id         String            @id @default(cuid())
+  branchId   String            @map("branch_id")
+  profesorId String?           @map("profesor_id")
+  name       String            @db.VarChar(255)
+  difficulty Difficulty
+  branch     Branch            @relation(fields: [branchId], references: [id])
+  profesor   Profesor?         @relation(fields: [profesorId], references: [id], onDelete: SetNull)
+  days       RoutineDay[]
+  clientes   Cliente[]
+  sessions   TrainingSession[]
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@index([branchId])
+  @@index([profesorId])
+  @@map("routines")
+}
+
+model RoutineDay {
+  id              String            @id @default(cuid())
+  routineId       String            @map("routine_id")
+  weekday         Int
+  title           String            @db.VarChar(255)
+  durationMinutes Int               @map("duration_minutes")
+  routine         Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercises       RoutineExercise[]
+  sessions        TrainingSession[]
+
+  @@unique([routineId, weekday])
+  @@map("routine_days")
+}
+
+model RoutineExercise {
+  id               String            @id @default(cuid())
+  routineDayId     String            @map("routine_day_id")
+  exerciseId       String            @map("exercise_id")
+  order            Int
+  sets             Int
+  reps             Int
+  unit             RepsUnit          @default(REPS)
+  restSeconds      Int               @map("rest_seconds")
+  comment          String?           @db.VarChar(500)
+  routineDay       RoutineDay        @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
+  exercise         Exercise          @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sessionExercises SessionExercise[]
+
+  @@index([routineDayId])
+  @@index([exerciseId])
+  @@map("routine_exercises")
+}
+
+// ==========================================
+// HISTORIAL DE EJECUCIÓN
+// ==========================================
+
+model TrainingSession {
+  id              String            @id @default(cuid())
+  clienteId       String            @map("cliente_id")
+  routineId       String?           @map("routine_id")
+  routineDayId    String?           @map("routine_day_id")
+  date            DateTime          @map("date")
+  weekday         Int
+  durationMinutes Int?              @map("duration_minutes")
+  completed       Boolean           @default(false)
+  cliente         Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  routine         Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  routineDay      RoutineDay?       @relation(fields: [routineDayId], references: [id], onDelete: SetNull)
+  exercises       SessionExercise[]
+
+  @@index([clienteId, date])
+  @@map("training_sessions")
+}
+
+model SessionExercise {
+  id                String           @id @default(cuid())
+  sessionId         String           @map("session_id")
+  routineExerciseId String?          @map("routine_exercise_id")
+  exerciseId        String           @map("exercise_id")
+  completed         Boolean          @default(false)
+  session           TrainingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  routineExercise   RoutineExercise? @relation(fields: [routineExerciseId], references: [id], onDelete: SetNull)
+  exercise          Exercise         @relation(fields: [exerciseId], references: [id])
+  sets              SessionSet[]
+
+  @@index([sessionId])
+  @@index([exerciseId])
+  @@map("session_exercises")
+}
+
+model SessionSet {
+  id                String          @id @default(cuid())
+  sessionExerciseId String          @map("session_exercise_id")
+  setIndex          Int             @map("set_index")
+  weightKg          Decimal?        @map("weight_kg") @db.Decimal(6, 2)
+  reps              Int?
+  unit              RepsUnit        @default(REPS)
+  completed         Boolean         @default(false)
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([sessionExerciseId])
+  @@map("session_sets")
+}

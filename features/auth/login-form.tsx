@@ -2,9 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
-import { DEMO_ACCOUNTS } from "./demo-accounts";
-import { SESSION_COOKIE_NAME } from "./session-cookie";
+import { authenticateRealUser } from "./authenticate-real-user";
 
 export function LoginForm() {
   const router = useRouter();
@@ -12,21 +12,21 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setIsSubmitting(true);
+    const result = await authenticateRealUser(identifier, password);
+    setIsSubmitting(false);
 
-    const accountId = identifier.trim().toLowerCase();
-    const account = DEMO_ACCOUNTS[accountId as keyof typeof DEMO_ACCOUNTS];
-
-    if (account && account.password === password) {
+    if (result.ok) {
       setError("");
-      document.cookie = `${SESSION_COOKIE_NAME}=${accountId}; path=/`;
-      router.push(account.redirectTo);
+      router.push(result.redirectTo);
       return;
     }
 
-    setError("Usuario o contraseña incorrectos.");
+    setError(result.error);
   }
 
   return (
@@ -35,10 +35,11 @@ export function LoginForm() {
         <User className="h-5 w-5 shrink-0 text-ink-muted" />
         <input
           type="text"
+          inputMode="numeric"
           autoComplete="username"
-          placeholder="Email o usuario"
+          placeholder="DNI, sin puntos ni comas"
           value={identifier}
-          onChange={(event) => setIdentifier(event.target.value)}
+          onChange={(event) => setIdentifier(event.target.value.replace(/\D/g, ""))}
           className="w-full bg-transparent text-base text-ink placeholder:text-ink-muted focus:outline-none"
         />
       </label>
@@ -71,10 +72,18 @@ export function LoginForm() {
 
       <button
         type="submit"
-        className="mt-2 min-h-14 rounded-2xl bg-brand text-base font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80"
+        disabled={isSubmitting}
+        className="mt-2 min-h-14 rounded-2xl bg-brand text-base font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80 disabled:opacity-60"
       >
-        Ingresar
+        {isSubmitting ? "Ingresando…" : "Ingresar"}
       </button>
+
+      <Link
+        href="/registro"
+        className="flex min-h-14 items-center justify-center rounded-2xl text-sm font-extrabold uppercase tracking-wide text-brand transition-opacity active:opacity-70"
+      >
+        ¿No tenés una cuenta? Registrate
+      </Link>
     </form>
   );
 }

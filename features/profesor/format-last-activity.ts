@@ -6,9 +6,11 @@ function startOfDay(date: Date): Date {
 
 /**
  * "Hoy, HH:MM" si `date` es hoy, "Ayer, HH:MM" si fue ayer, o "Hace N días" (sin hora) si es
- * más viejo que eso.
+ * más viejo que eso. `null` (sin ninguna actividad registrada todavía) → "Sin actividad todavía".
  */
-export function formatLastActivity(date: Date, referenceDate: Date = new Date()): string {
+export function formatLastActivity(date: Date | null, referenceDate: Date = new Date()): string {
+  if (!date) return "Sin actividad todavía";
+
   const dayDiff = Math.round(
     (startOfDay(referenceDate).getTime() - startOfDay(date).getTime()) / 86_400_000
   );

@@ -21,6 +21,9 @@ export function RutinasScreen({ data }: { data: RutinasData }) {
         {routines.map((routine) => (
           <RoutineCard key={routine.name} routine={routine} />
         ))}
+        {routines.length === 0 && (
+          <p className="py-6 text-center text-sm text-ink-muted">No se crearon rutinas.</p>
+        )}
       </div>
 
       <Link

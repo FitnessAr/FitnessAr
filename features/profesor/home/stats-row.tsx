@@ -1,20 +1,20 @@
 import { Activity, ClipboardList, Users } from "lucide-react";
 
 export function StatsRow({
-  totalStudents,
+  totalClients,
   totalRoutines,
   activeTodayCount,
 }: {
-  totalStudents: number;
+  totalClients: number;
   totalRoutines: number;
   activeTodayCount: number;
 }) {
   const tiles = [
     {
-      key: "students",
+      key: "clients",
       icon: Users,
-      value: totalStudents,
-      label: "Alumnos",
+      value: totalClients,
+      label: "Clientes",
       colorClassName: "text-ink-muted",
     },
     {

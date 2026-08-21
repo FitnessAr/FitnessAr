@@ -3,10 +3,10 @@ import { Plus, UserPlus } from "lucide-react";
 import { getInitials } from "@/lib/get-initials";
 import type { ProfesorHomeData } from "./types";
 import { StatsRow } from "./stats-row";
-import { ActiveStudentRow } from "./active-student-row";
+import { ActiveClientRow } from "./active-client-row";
 
 export function HomeScreen({ data }: { data: ProfesorHomeData }) {
-  const { professorName, totalStudents, totalRoutines, activeToday } = data;
+  const { professorName, totalClients, totalRoutines, activeToday } = data;
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8">
@@ -21,7 +21,7 @@ export function HomeScreen({ data }: { data: ProfesorHomeData }) {
       </header>
 
       <StatsRow
-        totalStudents={totalStudents}
+        totalClients={totalClients}
         totalRoutines={totalRoutines}
         activeTodayCount={activeToday.length}
       />
@@ -31,9 +31,14 @@ export function HomeScreen({ data }: { data: ProfesorHomeData }) {
           Activos hoy
         </p>
         <div className="flex flex-col gap-2">
-          {activeToday.map((student) => (
-            <ActiveStudentRow key={student.name} student={student} />
+          {activeToday.map((client) => (
+            <ActiveClientRow key={client.id} client={client} />
           ))}
+          {activeToday.length === 0 && (
+            <p className="py-4 text-center text-sm text-ink-muted">
+              Nadie entrenó hoy todavía.
+            </p>
+          )}
         </div>
       </section>
 
@@ -50,11 +55,11 @@ export function HomeScreen({ data }: { data: ProfesorHomeData }) {
             Nueva rutina
           </Link>
           <Link
-            href="/profesor/alumnos"
+            href="/profesor/clientes"
             className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-border bg-surface text-sm font-extrabold uppercase tracking-wide text-ink"
           >
             <UserPlus className="h-4 w-4" />
-            Nuevo alumno
+            Nuevo cliente
           </Link>
         </div>
       </section>

@@ -1,4 +1,4 @@
-// Etiquetas cortas lunes a domingo, mismo orden que features/alumno/week.ts.
+// Etiquetas cortas lunes a domingo, mismo orden que features/cliente/week.ts.
 const DAY_LABELS_MON_FIRST = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 // Convención Date.getDay() (0 = domingo ... 6 = sábado) → índice lunes-primero (0 = lunes).

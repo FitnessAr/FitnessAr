@@ -4,7 +4,7 @@ export type RoutineCard = {
   scheduleLabel: string;
   exerciseCount: number;
   durationMinutes: number;
-  assignedStudentNames: string[];
+  assignedClientNames: string[];
 };
 
 export type RutinasData = {

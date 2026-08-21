@@ -2,7 +2,7 @@ import { BottomNav, type BottomNavTab } from "@/components/bottom-nav";
 
 const TABS: BottomNavTab[] = [
   { href: "/profesor", label: "Inicio", icon: "home", exact: true },
-  { href: "/profesor/alumnos", label: "Alumnos", icon: "users" },
+  { href: "/profesor/clientes", label: "Clientes", icon: "users" },
   { href: "/profesor/rutinas", label: "Rutinas", icon: "clipboard" },
   { href: "/profesor/perfil", label: "Perfil", icon: "user" },
 ];

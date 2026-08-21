@@ -6,8 +6,8 @@ import type { RoutineCard as RoutineCardData } from "./types";
 const MAX_VISIBLE_AVATARS = 3;
 
 export function RoutineCard({ routine }: { routine: RoutineCardData }) {
-  const visibleStudents = routine.assignedStudentNames.slice(0, MAX_VISIBLE_AVATARS);
-  const overflowCount = routine.assignedStudentNames.length - visibleStudents.length;
+  const visibleClients = routine.assignedClientNames.slice(0, MAX_VISIBLE_AVATARS);
+  const overflowCount = routine.assignedClientNames.length - visibleClients.length;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
@@ -31,7 +31,7 @@ export function RoutineCard({ routine }: { routine: RoutineCardData }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center -space-x-2">
-          {visibleStudents.map((name) => (
+          {visibleClients.map((name) => (
             <span
               key={name}
               className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface text-[10px] font-bold ${getAvatarColorClassName(
@@ -48,7 +48,7 @@ export function RoutineCard({ routine }: { routine: RoutineCardData }) {
           )}
         </div>
         <p className="text-xs text-ink-muted">
-          {routine.assignedStudentNames.length} alumnos asignados
+          {routine.assignedClientNames.length} clientes asignados
         </p>
       </div>
     </div>

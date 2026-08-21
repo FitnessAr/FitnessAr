@@ -1,5 +1,5 @@
 // Asigna una clase de color de forma determinística según el texto, sobre una paleta chica dada.
-// Así cualquier valor nuevo (grupo muscular, nombre de alumno, etc.) ya tiene un color consistente
+// Así cualquier valor nuevo (grupo muscular, nombre de cliente, etc.) ya tiene un color consistente
 // sin mantener un mapa manual.
 export function getHashColorClassName(value: string, palette: string[]): string {
   let hash = 0;

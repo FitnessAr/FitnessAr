@@ -1,0 +1,113 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { X } from "lucide-react";
+import { updateUserPasswordAction } from "./actions";
+import type { AdminUserRow } from "./types";
+
+const ROLE_LABELS: Record<AdminUserRow["role"], string> = {
+  ADMIN: "Administrador",
+  PROFESOR: "Profesor",
+};
+
+export function EditarCuentaScreen({ user }: { user: AdminUserRow }) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    formData.set("password", password);
+    formData.set("confirmPassword", confirmPassword);
+
+    const result = await updateUserPasswordAction(user.id, formData);
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    router.push("/admin/usuarios");
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+            {ROLE_LABELS[user.role]}
+          </p>
+          <h1 className="text-2xl font-black uppercase leading-tight text-ink">{user.name}</h1>
+        </div>
+        <Link
+          href="/admin/usuarios"
+          aria-label="Cerrar"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-elevated text-ink-muted"
+        >
+          <X className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <p className="text-sm text-ink-muted">
+          Cargá una contraseña nueva para {user.name}. No hace falta la anterior.
+        </p>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+            Nueva contraseña
+          </span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            minLength={6}
+            className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-ink focus:border-brand focus:outline-none"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+            Confirmar contraseña
+          </span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+            minLength={6}
+            className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-ink focus:border-brand focus:outline-none"
+          />
+        </label>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="mt-2 min-h-14 rounded-2xl bg-brand text-base font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80 disabled:opacity-60"
+        >
+          {isSubmitting ? "Guardando…" : "Guardar contraseña"}
+        </button>
+      </form>
+    </div>
+  );
+}

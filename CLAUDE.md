@@ -3,7 +3,7 @@
 # Contexto del proyecto — FitnessAr
 
 Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenamiento en gimnasios
-(profesores asignan, alumnos ejecutan y consultan progreso). Visión completa en `README.md`.
+(profesores asignan, clientes ejecutan y consultan progreso). Visión completa en `README.md`.
 
 ## Estado actual (no borrar esta sección sin confirmar con el usuario)
 
@@ -14,91 +14,184 @@ Plataforma para digitalizar la asignación y seguimiento de rutinas de entrenami
   prolijo por sobre completitud funcional.
 - Es un proyecto compartido con un amigo, no un side project individual — confirmar antes de
   decisiones de arquitectura o de producto no triviales, no asumir unilateralmente.
-- Pantalla de login implementada con autenticación **hardcodeada de demo** (`alumno`/`alumno`,
-  `alumno2`/`alumno2`, `profesor`/`profesor`, `profesor2`/`profesor2` en
-  `features/auth/demo-accounts.ts`) hasta que se conecte la autenticación propia real (decidido:
-  sin Clerk — ver "Roles del sistema" y "Stack técnico"; falta sumar la cuenta `admin`/`admin` al
-  mock y el panel de administrador cuando se planifique esa pantalla). Existe una **sesión mínima
-  real**
-  (`features/auth/session.ts`, `getCurrentIdentity()`) vía cookie no-httpOnly: el login guarda qué
-  cuenta entró y cada pantalla de alumno/profesor la lee para saber a quién mostrar, en vez de
-  tener un nombre hardcodeado por archivo. `alumno2`/`profesor2` son cuentas "vacías" (sin nadie
-  agendado entre sí) para poder mostrar el estado de un alumno sin profesor asignado. "Cerrar
-  sesión" (`features/auth/logout-link.tsx`) limpia esa cookie de verdad — si no, cambiar de cuenta
-  quedaría pegado a la anterior.
-- Home del alumno (`/alumno`) implementada con datos de fecha reales (no fija) — el día "hoy" del
-  mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado.
-- Rutina del alumno (`/alumno/rutina`) implementada: nombre del programa, quién lo asignó y desde
-  cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios (nombre +
-  series x reps) del día de hoy.
+- **Backend real: fase 1 lista** (DB migrada y poblada, la app todavía corre 100% sobre mocks —
+  ver más abajo, no se tocó nada de `features/`/`app/`). `prisma/schema.prisma` tiene el modelo
+  acordado (Branch → User/Profesor/Cliente/Exercise/Routine → RoutineDay → RoutineExercise, más
+  TrainingSession/SessionExercise/SessionSet como historial de ejecución). Decisiones clave
+  cerradas ahí: sin tabla `Gym` (cada instancia ya es una DB propia), auth propia sin Clerk
+  (`User.passwordHash` sirve tanto de contraseña como de PIN), y "eliminar cuenta" es
+  **desactivar** (`User.deactivatedAt`), nunca un borrado real.
+  - **Proyecto Supabase real conectado**, migración inicial corrida (`prisma/migrations/`).
+  - **Prisma 7** trajo breaking changes importantes vs. el diseño original del schema: el
+    datasource ya no lleva `url`/`directUrl` (se sacaron del `.prisma`), la conexión para la CLI
+    (migrate/seed/studio) vive en `prisma.config.ts` (usa `DIRECT_URL`), y el motor de queries ya
+    no viene embebido — el `generator client` genera código a `generated/prisma/` (gitignored,
+    se regenera con `npx prisma generate`) y tanto el seed como el futuro cliente de la app
+    necesitan un **driver adapter** (`@prisma/adapter-pg` + `pg`) en vez de instanciar
+    `new PrismaClient()` a secas.
+  - **El seed (`prisma/seed.ts`) deja la base vacía a propósito**, salvo una única cuenta admin
+    de bootstrap — nombre `admin`, DNI (`loginId`) `12345678`, contraseña `admin` hasheada con
+    `bcryptjs` (reemplazó a la credencial original `admin`/`admin` cuando el login pasó a ser por
+    DNI en vez de usuario libre, ver "Roles del sistema") — mismo criterio que "alta de la primera
+    cuenta de administrador de esa instancia" ya anotado más abajo. Los datos de la demo comercial
+    (Valentina Ruiz, Fuerza Total, etc.) **no** se migran a esta base — siguen viviendo solo en
+    `features/*`, que sigue siendo lo único que alimenta la demo mientras tanto.
+  - **La cuenta de bootstrap (DNI `12345678` / contraseña `admin`) es pública y permanente a
+    propósito (decisión explícita del usuario, no un descuido)** — sirve tanto para mostrar la
+    demo del panel de admin como de puerta de entrada para el onboarding real de un cliente
+    nuevo. Riesgo evaluado y aceptado: cualquiera que conozca la credencial (no solo un cliente
+    real) puede entrar y crear una cuenta admin propia que sobrevive aunque después se borre esta
+    cuenta de bootstrap — se juzgó la probabilidad baja para el contexto de demo/etapa temprana.
+    Mitigación **manual, no de código**: si se detecta un uso indebido, se corrige a mano desde el
+    dashboard de Supabase (borrar la cuenta intrusa, rotar credenciales). No reabrir esta decisión
+    (auto-desactivación, credencial única por instancia, etc.) sin que el usuario lo pida de nuevo
+    explícitamente — ya se evaluaron esas alternativas y
+    se descartaron.
+  - `.env.example` documenta `DATABASE_URL` (pooled, para cuando la app se conecte de verdad —
+    todavía sin usar) y `DIRECT_URL` (conexión directa, la que usan hoy `prisma.config.ts` y el
+    seed). El `.env` real es local, nunca se commitea ni se pega en el chat.
+  - **Login real conectado** (`features/auth/authenticate-real-user.ts`, Server Action) — valida
+    contra `User` de verdad (por `loginId` o `email`, bcrypt). Al principio convivía con 4 cuentas
+    de demo hardcodeadas en `login-form.tsx`; esas cuentas se sacaron por completo más adelante en
+    esta misma sesión de trabajo (ver más abajo, "Login real único") — hoy `login-form.tsx` llama
+    directo a esta función, sin ningún chequeo previo. La cookie de sesión distingue de dónde viene
+    la identidad (`demo:<key>` vs. `real:<userId>.<firma>`, ver `features/auth/session-cookie.ts`)
+    — `getCurrentIdentity()` (usada por todo `features/cliente/` y `features/profesor/`) resuelve
+    identidades demo (hoy siempre `null`, nada las escribe ya); `getCurrentRealUserId()` resuelve
+    las reales. `lib/db.ts` es el singleton de
+    `PrismaClient` de la app (con `@prisma/adapter-pg` + `DATABASE_URL` pooled — a diferencia del
+    seed, que usa `DIRECT_URL`), cacheado en `globalThis` para el hot-reload de desarrollo.
+  - **Panel de administración** (`/admin`, route group `(tabs)` con Inicio/Usuarios/Ejercicios/
+    Configuración, mismo patrón de `BottomNav` que cliente/profesor) — protegido por
+    `features/admin/require-admin.ts` (exige sesión real + rol `ADMIN` + cuenta activa, si no
+    redirige a `/`). **Usuarios** (`features/admin/usuarios/`) es el entregable real: lista
+    Administradores/Profesores (nunca Clientes, ver "Roles del sistema") con pills de filtro y
+    contador (fila de pills con scroll horizontal, `flex-nowrap overflow-x-auto`, para que entren
+    las tres sin partirse en dos líneas en mobile), alta real vía formulario (`/admin/usuarios/nuevo`,
+    fuera de `(tabs)`, mismo criterio que `/profesor/rutinas/nueva`) que pide **DNI + contraseña
+    + confirmar contraseña** (nunca email — `User.loginId` guarda el DNI, mismo mecanismo que la
+    cuenta de bootstrap; el campo `User.email` queda sin usarse desde el alta) y crea `User` +
+    `Profesor` en una transacción.
+    Por fila: interruptor de Activo/Inactivo (desactivar/reactivar) y basura (borrado real, con
+    confirmación) son **mecanismos distintos** — ver el detalle completo en "Roles del sistema".
+    "Editar" (lápiz) abre `/admin/usuarios/[id]/editar` para resetear la contraseña de esa cuenta
+    (ver también "Roles del sistema"). Ejercicios y Configuración son stubs ("Próximamente");
+    Configuración tiene el `LogoutLink`.
+  - **Pendiente, próximas pasadas**: reemplazar cada `get-*-data.ts` mock de cliente/profesor por
+    queries de Prisma, pantalla por pantalla — hoy siguen 100% sobre mocks aunque el login y el
+    panel de admin ya sean reales.
+- **Login real único** — la pantalla de login (`login-form.tsx`) ya no tiene cuentas de demo
+  hardcodeadas: se sacaron por completo (`features/auth/demo-accounts.ts` no existe más), todo
+  intento de login consulta directo la base real vía `authenticateRealUser`, por DNI+contraseña.
+  De acá en más los caminos de entrada son la cuenta de bootstrap (DNI `12345678` / contraseña
+  `admin`), lo que el propio admin cree desde `/admin/usuarios` (Profesor/Administrador), y el
+  autoregistro de Cliente en `/registro` (ver más
+  abajo). `features/cliente/` y `features/profesor/` siguen resolviendo identidad vía
+  `getCurrentIdentity()` (`features/auth/session.ts`, formato de cookie `demo:<key>`) — ese
+  mecanismo no se tocó, pero como ya nada lo escribe, esas pantallas quedan sin puerta de entrada
+  hasta que exista login real de Cliente/Profesor dentro de esas pantallas específicas (Fase 4) —
+  intencional y esperado, no un bug (un Cliente registrado desde `/registro` sí entra de verdad,
+  ver más abajo — lo que falta es reemplazar los mocks de esas pantallas por datos reales).
+  Existe una **sesión mínima real** (`features/auth/session.ts`) vía cookie
+  (`fitnessar_demo_identity`), hoy siempre en formato `real:<userId>.<firma>` — **httpOnly y
+  firmada con HMAC** (`SESSION_SECRET`, variable de entorno en `.env.example`). Corrige un hueco
+  real detectado en esta misma sesión de trabajo: antes la cookie real la escribía el propio JS
+  del cliente sin firma, así que cualquiera podía editarla a mano en devtools y suplantar a un
+  usuario si conocía su `id`. Ahora solo `setRealSession(userId)` (`features/auth/session.ts`,
+  usado por `authenticateRealUser` y por `registerClienteAction`) puede generarla —vía
+  `cookies().set(...)` del servidor, siempre después de validar contraseña o crear la cuenta— y
+  `getCurrentRealUserId()` verifica la firma antes de confiar en el `userId`; una cookie editada a
+  mano se rechaza. "Cerrar sesión" ya no limpia la cookie con JS de cliente (una cookie httpOnly no
+  se puede tocar desde `document.cookie`) — `features/auth/logout-link.tsx` llama a un Server
+  Action (`features/auth/logout.ts`, `logoutAction()`) que la borra del lado del servidor.
+- **Registro de Cliente** (`/registro`, `features/cliente/registro/`) — pantalla pública (sin
+  sesión previa, mismo nivel que el login) que pide Nombre, DNI, Contraseña y Confirmar
+  contraseña, y crea `User` (rol `CLIENTE`) + `Cliente` de verdad en una transacción
+  (`registerClienteAction`, sin `requireAdmin()` a propósito: es la única acción de alta pensada
+  para alguien sin cuenta todavía). `branchId` se resuelve con `prisma.branch.findFirst()` (una
+  sola sucursal por instancia en la práctica, mismo criterio que `prisma/seed.ts`). El Cliente
+  recién creado queda con `profesorId: null` (mismo estado "sin profesor asignado" que ya maneja
+  `features/cliente/home/no-professor-assigned.tsx`) y **loguea automáticamente** al terminar
+  (`setRealSession`), sin volver a pedirle DNI/contraseña — cae directo en `/cliente`. Login
+  (`login-form.tsx`) tiene un link "¿No tenés una cuenta? Registrate" debajo del botón de
+  ingresar que lleva acá; esta pantalla tiene el inverso ("¿Ya tenés cuenta? Iniciar sesión") de
+  vuelta a `/`.
+- Home del cliente (`/cliente`) implementada con datos de fecha reales (no fija) — el día "hoy"
+  del mini calendario y de la tarjeta de entrenamiento sale de `new Date()`, no está hardcodeado.
+- Rutina del cliente (`/cliente/rutina`) implementada: nombre del programa, quién lo asignó y
+  desde cuándo, los 7 días de la semana con su entrenamiento o "Descanso", y los ejercicios
+  (nombre + series x reps) del día de hoy.
 - El catálogo de rutinas (mock) vive en un solo lugar, `features/routines/catalog.ts`
   (`getRoutineCatalog()`) — hoy tiene "Fuerza Total" y "Cardio y Tonificación", global (no
-  segmentado por profesor todavía). El pool de alumnos (mock) también es neutral, vive en
-  `features/students/roster.ts` (`getAllStudents()`) — cada alumno tiene `assignedProfessorId`
-  (`null` si no tiene profesor todavía) y, si tiene login de demo, `loginId`. El alumno
-  (`features/alumno/active-routine.ts`) resuelve, según la identidad logueada, cuál rutina le
+  segmentado por profesor todavía). El pool de clientes (mock) también es neutral, vive en
+  `features/clients/roster.ts` (`getAllClients()`) — cada cliente tiene `assignedProfessorId`
+  (`null` si no tiene profesor todavía) y, si tiene login de demo, `loginId`. El cliente
+  (`features/cliente/active-routine.ts`) resuelve, según la identidad logueada, cuál rutina le
   corresponde y le suma `assignedBy`/`assignedSince` — **devuelve `null` si no tiene profesor
-  asignado** (caso de `alumno2`/"Camila Ibáñez"), y ahí Home (`features/alumno/home/`) muestra la
-  pantalla "Aún no tenés entrenamientos asignados" (`no-professor-assigned.tsx`, con dos botones
-  todavía inactivos: "Unirme a un profesor" y "¿Cómo me uno a un profesor?" — la lógica de
-  aceptación profesor↔alumno queda para más adelante), Rutina (`features/alumno/rutina/`) muestra
-  un mensaje compacto, y el checklist de hoy (`features/alumno/session/`) redirige a Home. La
-  pestaña Rutinas del profesor (`features/profesor/rutinas/`) cruza el catálogo con
-  `features/profesor/roster.ts` (`getStudentRoster(professorId)`, que filtra el pool neutral por
-  profesor) para contar asignaciones — son las fuentes a reemplazar por Prisma cuando esté el
-  backend; los componentes de UI no cambian.
-- Checklist de hoy (`/alumno/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
+  asignado** (caso de `cliente2`/"Camila Ibáñez"), y ahí Home (`features/cliente/home/`) muestra
+  la pantalla "Aún no tenés entrenamientos asignados" (`no-professor-assigned.tsx`, con dos
+  botones todavía inactivos: "Unirme a un profesor" y "¿Cómo me uno a un profesor?" — la lógica de
+  aceptación profesor↔cliente queda para más adelante), Rutina (`features/cliente/rutina/`)
+  muestra un mensaje compacto, y el checklist de hoy (`features/cliente/session/`) redirige a
+  Home. El lado profesor **ya no usa este catálogo mock** — ver más abajo, tiene su propia fuente
+  real (`features/profesor/rutinas/get-branch-routines.ts`); `features/routines/catalog.ts` sigue
+  viva únicamente porque el lado cliente todavía depende de ella (`active-routine.ts`), pendiente
+  de su propia migración a Prisma aparte.
+- Checklist de hoy (`/cliente/rutina/hoy`, se llega desde "Comenzar entrenamiento" en Home o "Ver"
   en Rutina): a propósito vive **fuera** del nav inferior de 4 pestañas (route group
-  `app/alumno/(tabs)/` para Inicio/Rutina/Progreso/Perfil vs. `app/alumno/rutina/hoy/` aparte) —
+  `app/cliente/(tabs)/` para Inicio/Rutina/Progreso/Perfil vs. `app/cliente/rutina/hoy/` aparte) —
   es una pantalla de foco total tipo "iniciar entrenamiento", sin la barra de navegación. Durante
   un descanso activo (`RestTimer`) se bloquea marcar cualquier otra serie salvo destildar la que
   disparó ese descanso (por si fue un error).
-- Home (`/profesor`), Alumnos (`/profesor/alumnos`) y Rutinas (`/profesor/rutinas`) del profesor
-  implementadas. `features/profesor/roster.ts` (`getStudentRoster(professorId)`) filtra el pool
-  neutral de alumnos (`features/students/roster.ts`, con la regla de negocio de "actividad"/"activo
-  hoy" documentada ahí mismo) por el profesor logueado — cada pantalla resuelve la identidad actual
-  vía `getCurrentIdentity()` antes de pedir el roster. Home deriva de ahí sus 3 métricas + la lista
-  de activos hoy — no hay un mock aparte por pantalla; con `profesor2` (sin alumnos) las 3 métricas
-  dan `0` sin lógica extra. Rutinas cruza ese roster filtrado con `getRoutineCatalog()` para contar
-  alumnos asignados por rutina. `features/profesor/professor.ts` (`getProfessorProfile(id)`)
-  soporta más de un profesor (hoy "Rodrigo Vega" y "Lucía Fernández"). "+ Nueva rutina" (Home y
-  Rutinas) apunta a
-  `/profesor/rutinas/nueva`, fuera del route group `(tabs)` (mismo criterio que
-  `/alumno/rutina/hoy`) — implementada como formulario interactivo
-  (`features/profesor/rutinas/nueva/`): nombre editable, selector de días (pills tocables,
-  convención `Date.getDay()` de `features/routines/catalog.ts`), sección de ejercicios vacía
-  (arranca en 0, sin precargar nada) con "Agregar ejercicio" inactivo, y "Asignar alumnos" sobre
-  el roster (muestra `routineName` actual de cada alumno como subtítulo en vez de un "nivel"
-  inventado, mismo criterio que la pestaña Alumnos). "Guardar rutina" es **solo visual** por ahora:
-  vuelve a la lista sin crear nada en el catálogo — pendiente resolver junto con el alta real de
-  ejercicios. Perfil (`/profesor/perfil`, `features/profesor/perfil/`) implementado:
-  avatar + nombre, y una lista Horario/Alumnos/Rutinas (título izquierda, dato derecha) — sin datos
-  de relleno tipo especialidad/certificación/gimnasio. La identidad del profesor logueado
-  (nombre, horario) vive en `features/profesor/professor.ts`, consumida tanto por Home como por
-  Perfil. "Cerrar sesión" usa `features/auth/logout-link.tsx` (mismo componente que el stub de
-  Perfil del alumno) para limpiar la cookie de sesión de verdad. El nav inferior
+- **Lado profesor conectado a Prisma de verdad** (Home, Clientes, Rutinas, Perfil, y
+  `/profesor/rutinas/nueva`) — ya no hay ningún mock de por medio salvo lo explícitamente marcado
+  abajo. Guardia nueva `features/profesor/require-profesor.ts` (`requireProfesor()`, mismo patrón
+  que `requireAdmin()`): exige sesión real con rol `PROFESOR`, cuenta activa, y una fila `Profesor`
+  asociada — las 5 páginas de `app/profesor/**` la llaman primero y le pasan `{user, profesor}` a
+  cada `get-*-data.ts` (antes cada una resolvía identidad por su cuenta vía `getCurrentIdentity()`,
+  que dejó de funcionar en cuanto se sacaron las cuentas demo — por eso se veía siempre "Rodrigo
+  Vega" y un roster/catálogo que nadie creó). `features/profesor/roster.ts` (`getClientRoster`)
+  consulta `Cliente` real filtrado por `profesorId`; `features/profesor/rutinas/get-branch-routines.ts`
+  (nuevo) consulta `Routine`/`RoutineDay`/`RoutineExercise` reales de la sucursal — ninguno de los
+  dos toca los mocks compartidos (`features/clients/roster.ts`, `features/routines/catalog.ts`),
+  que siguen vivos solo porque el lado cliente todavía depende de ellos. El nombre/horario del
+  profesor salen directo de `User.name`/`Profesor.schedule` (`features/profesor/professor.ts`,
+  que tenía hardcodeado "Rodrigo Vega"/"Lucía Fernández", se borró). Cada listado que da vacío
+  (el caso normal para cualquier profesor recién registrado, sin clientes ni rutinas todavía)
+  muestra un cartel a medida en vez de quedar en blanco: "Todavía no tenés clientes asignados."
+  (Clientes, antes de buscar) vs. "No se encontraron clientes." (búsqueda sin resultados, ambos en
+  `clientes-screen.tsx`), "Nadie entrenó hoy todavía." (Home, sección Activos hoy) y "No se crearon
+  rutinas." (Rutinas). `formatLastActivity` (`features/profesor/format-last-activity.ts`) ahora
+  acepta `null` → "Sin actividad todavía": sin ninguna tabla de historial de entrenamiento poblada
+  todavía (`TrainingSession` sin usar en ningún lado), `streakDays`/`setsCompletedToday` quedan en
+  `0` y `lastActivityAt` en `null` para cualquier cliente real — mostrar que no hay datos en vez de
+  inventar un número. "+ Nueva rutina" (Home y Rutinas) sigue apuntando a `/profesor/rutinas/nueva`
+  (fuera del route group `(tabs)`, mismo criterio que `/cliente/rutina/hoy`), y **"Guardar rutina"
+  sigue siendo solo visual** (no crea nada) — a propósito fuera de alcance hasta tener un catálogo
+  real de `Exercise` (la tabla existe en el schema pero está vacía; el usuario todavía tiene que
+  pasar la fuente de verdad de ejercicios). El nav inferior
   (`components/bottom-nav.tsx`) y los helpers de iniciales/color por hash
-  (`lib/get-initials.ts`, `lib/color-hash.ts`) son compartidos entre alumno y profesor — no
+  (`lib/get-initials.ts`, `lib/color-hash.ts`) son compartidos entre cliente y profesor — no
   duplicar por rol.
-- Perfil del alumno (`/alumno/perfil`, `features/alumno/perfil/`) implementado: avatar + nombre,
-  y una lista Profesor asignado/Rutina activa/Miembro desde/Próximo entrenamiento (título
+- Perfil del cliente (`/cliente/perfil`, `features/cliente/perfil/`) implementado: avatar +
+  nombre, y una lista Profesor asignado/Rutina activa/Miembro desde/Próximo entrenamiento (título
   izquierda, dato derecha, mismo lenguaje visual que el Perfil del profesor) — sin subtítulo de
-  "nivel" ni stat-tiles de relleno. Progreso (`/alumno/progreso`, `features/alumno/progreso/`)
+  "nivel" ni stat-tiles de relleno. Progreso (`/cliente/progreso`, `features/cliente/progreso/`)
   implementado: actividad semanal (check por día completo), 4 métricas (entrenamientos del mes,
   racha actual, tiempo total del mes, ejercicios de hoy) y récords personales. Sigue siendo
-  **mock** — no se conecta con lo que se tilda en el checklist (`/alumno/rutina/hoy`, que no
-  persiste nada todavía) — pero la lógica de negocio es real: `features/alumno/progreso/
+  **mock** — no se conecta con lo que se tilda en el checklist (`/cliente/rutina/hoy`, que no
+  persiste nada todavía) — pero la lógica de negocio es real: `features/cliente/progreso/
   training-log.ts` genera un historial de sesiones relativo a "hoy" (con un hueco deliberado a
   mitad de camino, para poder probar que el corte de racha funciona) y
   `get-progreso-data.ts` calcula todo sobre ese historial (racha = días programados consecutivos
   completados, sin que un día de descanso la corte; récords = 1RM estimado por fórmula de Epley,
   ver nota de alcance más abajo). Ambas pantallas, sin profesor asignado, reusan el mismo mensaje
-  compacto de Rutina (`features/alumno/no-professor-message.tsx`).
+  compacto de Rutina (`features/cliente/no-professor-message.tsx`).
 
 ## Prioridad #1: Mobile-first
 
 **Regla:** toda pantalla y componente se diseña y maqueta primero para mobile.
-**Por qué:** los alumnos van a entrar casi 100% desde el celular, parados en el gimnasio — no hay
+**Por qué:** los clientes van a entrar casi 100% desde el celular, parados en el gimnasio — no hay
 margen de UX para un flujo pensado desktop-first y adaptado después.
 **Cómo aplicar:** breakpoints mobile como base (no como afterthought), botones y áreas táctiles
 grandes, tipografía legible, mínimo texto por pantalla, navegación simple para usuarios de
@@ -145,27 +238,60 @@ código (no solo a futuro):
 
 ## Roles del sistema
 
-El ingreso a la app es una **única pantalla de login** (usuario/contraseña), sin selector de rol
-previo: el rol queda determinado por qué credencial matchea (DNI+PIN de cliente vs. email+
-contraseña de profesor), no se le pregunta al usuario "¿sos alumno o profesor?".
+El ingreso a la app es una **única pantalla de login** (DNI+contraseña), sin selector de rol
+previo: el rol queda determinado por qué cuenta matchea ese DNI, no se le pregunta al usuario
+"¿sos cliente o profesor?". Los 3 roles comparten el mismo mecanismo de login — **DNI +
+contraseña** (unificado; ver "Autenticación" más abajo, reemplaza tanto un "usuario" genérico
+como el DNI+PIN separado que se había planteado en un principio para Cliente).
 
-- **Profesor**: login email+contraseña. Busca clientes por DNI, asigna rutinas semanales.
-- **Cliente**: login simplificado DNI+PIN. Ve rutina activa, histórico reciente (peso/series/reps),
-  comentarios del profesor.
-- **Administrador de gimnasio**: login con credenciales. Gestiona catálogo de ejercicios de la
+- **Profesor**: login DNI+contraseña (igual que Administrador y Cliente). Busca clientes por DNI,
+  asigna rutinas semanales.
+- **Cliente**: login DNI+contraseña (igual que Profesor/Administrador). Ve rutina activa,
+  histórico reciente (peso/series/reps), comentarios del profesor.
+- **Administrador de gimnasio**: login DNI+contraseña. Gestiona catálogo de ejercicios de la
   sucursal y alta de profesores.
 
-**Autenticación (decidido — sin Clerk):** login propio construido en el proyecto, usuario y
-contraseña. Cuentas iniciales de cada instancia (seed): un admin, y al menos un profesor y un
-cliente de ejemplo. A partir de ahí:
-- Solo el **administrador** puede crear cuentas nuevas, y únicamente con rol Profesor o
-  Administrador (no crea cuentas de Cliente — el alta de Cliente es un camino aparte, todavía sin
-  definir del todo: ver "Decisiones de negocio pendientes").
-- Solo el **administrador** puede eliminar cuentas, de cualquier rol (incluida otra cuenta de
-  administrador).
-- Pantalla de gestión de cuentas (alta/baja) del administrador: todavía sin diseñar — falta pasar
-  por el mismo proceso de planeamiento que el resto de las pantallas (captura de referencia +
-  plan) antes de implementarla.
+**Autenticación (decidido — sin Clerk):** login propio construido en el proyecto, DNI y
+contraseña (`User.loginId` guarda el DNI para los 3 roles; excepción: la cuenta de bootstrap
+(nombre `admin`, DNI `12345678`), cuyo DNI es un valor fijo elegido a propósito, no el documento
+real de nadie). Cuentas iniciales de cada
+instancia (seed): solo un admin de bootstrap, nada más — ver "Estado actual". A partir de ahí:
+- Solo el **administrador** puede crear cuentas de Profesor o Administrador (`/admin/usuarios/nuevo`).
+  **Cliente es la excepción: se autoregistra** desde `/registro` (ver "Estado actual" y
+  `features/cliente/registro/`), sin necesitar que un admin lo dé de alta — queda sin profesor
+  asignado hasta que se una a uno (flujo todavía sin construir, ver "Decisiones de negocio
+  pendientes").
+- Solo el **administrador** puede desactivar o eliminar cuentas, de cualquier rol (incluida otra
+  cuenta de administrador) — **dos mecanismos distintos y a propósito separados en la UI**
+  (`features/admin/usuarios/user-row.tsx`):
+  - El interruptor "Activo/Inactivo" (`setUserActiveAction`) **desactiva** (`User.deactivatedAt`):
+    la cuenta sigue en la base con su historial y rutinas creadas intactos, solo deja de poder
+    loguear y de aparecer en listados activos. Reversible en cualquier momento reactivándola.
+  - El ícono de basura (`deleteUserAction`, con confirmación) hace un **borrado real** de la fila
+    (`prisma.user.delete`) — irreversible. `Profesor.user` tiene `onDelete: Cascade`, así que el
+    perfil de Profesor asociado se borra junto con el `User`; las rutinas y clientes que tenía
+    asignados **no** se borran (`Routine.profesorId`/`Cliente.profesorId` son `SetNull` en el
+    schema), solo quedan sin profesor asignado.
+  **Excepción explícita en los dos casos: un admin nunca puede desactivarse ni eliminarse a sí
+  mismo** — guardia server-side en ambas actions (`features/admin/usuarios/actions.ts`), no solo
+  deshabilitado en la UI (`user-row.tsx` también deshabilita el toggle/basura en la propia fila,
+  marcada "(Vos)"). El caso de desactivación se agregó después de un lockout real en desarrollo: al
+  no haber ninguna otra cuenta admin, desactivarse a sí mismo deja el sistema sin forma de loguear
+  (la única recuperación en ese caso es editar `deactivatedAt` a mano en la base) — el borrado
+  propio se bloqueó por el mismo motivo, agravado por no tener siquiera un "reactivar" después.
+  Además, el admin puede **resetear la contraseña de cualquier cuenta** (`/admin/usuarios/[id]/editar`,
+  ícono de lápiz, `updateUserPasswordAction`) sin ver ni necesitar la anterior — solo se guarda el
+  hash, así que "revelarla" no es técnicamente posible; simplemente carga una nueva con
+  confirmación. Esto también sirve para la propia cuenta.
+- Pantalla de gestión de cuentas del administrador **implementada** — `/admin/usuarios` (ver
+  "Estado actual").
+- **Login con límite de intentos**: 5 intentos fallidos seguidos sobre la misma cuenta la bloquean
+  por 1 minuto (`User.failedLoginAttempts`/`User.lockedUntil`, `authenticateRealUser` en
+  `features/auth/authenticate-real-user.ts`) — durante el bloqueo se rechaza cualquier intento,
+  incluso con la contraseña correcta, para que el límite sea real. El contador se resetea a 0 en
+  cualquier login exitoso. Alcance a propósito acotado **por cuenta** (`User.id`), no por IP: no
+  protege contra probar muchos usuarios distintos en simultáneo, se consideró fuera de alcance para
+  esta etapa (no hay infraestructura de rate-limit por IP en el proyecto).
 
 ## Alcance del MVP
 
@@ -180,31 +306,41 @@ cliente de ejemplo. A partir de ahí:
 - Tipificación de rutinas (hipertrofia, fuerza, resistencia, descarga).
 - Autogestión de rutinas por el cliente.
 - Métricas avanzadas — sí se usa el 1RM estimado (fórmula de Epley) puntualmente para ordenar
-  "récords personales" en Progreso del alumno, por pedido explícito del usuario (ver "Estado
+  "récords personales" en Progreso del cliente, por pedido explícito del usuario (ver "Estado
   actual"); lo que sigue fuera de alcance es un módulo de métricas avanzadas más amplio.
 - Módulo de comunicación y noticias del gimnasio.
 
 ## Decisiones de negocio pendientes
 
-- Recuperación de acceso del cliente (login DNI+PIN): sin definir todavía. Opciones que el usuario
-  está evaluando: recuperación por teléfono, o gestión manual vía administrador. No implementar un
+- Recuperación de acceso del cliente (contraseña olvidada): sin definir todavía. Opciones que el
+  usuario está evaluando: recuperación por teléfono, o gestión manual vía administrador (mismo
+  mecanismo que ya existe para Profesor/Admin: el admin resetea la contraseña desde
+  `/admin/usuarios/[id]/editar` — pero el admin no gestiona cuentas de Cliente en esa pantalla,
+  ver "Roles del sistema", así que para Cliente sigue siendo un camino aparte). No implementar un
   mecanismo propio sin confirmar cuál eligieron.
-- Alta de cuentas de Cliente: el administrador **no** las crea (solo crea Profesor/Administrador —
-  ver "Roles del sistema"). El camino real de alta de Cliente todavía no está definido — candidatos
-  vistos hasta ahora en la demo: que el propio alumno se una a un profesor (botón "Unirme a un
-  profesor", hoy inactivo en `no-professor-assigned.tsx`) y/o que el profesor dé de alta al
-  cliente. No asumir cuál sin confirmar.
+- ~~Alta de cuentas de Cliente~~ — **resuelto**: autoregistro en `/registro` (ver "Roles del
+  sistema" y "Estado actual"). Sigue pendiente el paso siguiente — cómo un Cliente ya registrado
+  pero sin profesor se une a uno (botón "Unirme a un profesor", hoy inactivo en
+  `no-professor-assigned.tsx`) — no asumir el mecanismo sin confirmar.
 
 ## Stack técnico
 
 Next.js (App Router) + TypeScript + Tailwind · PostgreSQL vía Supabase · Prisma como ORM ·
-**autenticación propia** (usuario/contraseña + roles + sesión, todo construido en el proyecto —
+**autenticación propia** (DNI/contraseña + roles + sesión, todo construido en el proyecto —
 decidido explícitamente en contra de usar Clerk) · Cloudinary para media de ejercicios · Vercel
 para deploy.
 
 Este proyecto corre sobre Next.js 16.x — ver `AGENTS.md` (importado arriba): antes de escribir
 código de Next.js, revisar `node_modules/next/dist/docs/` por breaking changes vs. conocimiento
 de entrenamiento previo.
+
+También corre sobre **Prisma 7.x**, una versión con breaking changes grandes vs. conocimiento de
+entrenamiento previo (motor de queries ya no embebido — hace falta un driver adapter tipo
+`@prisma/adapter-pg`; el datasource ya no lleva `url`/`directUrl` en el `.prisma`, se mueve a
+`prisma.config.ts`; el cliente generado va a una carpeta de salida propia en vez de
+`node_modules/@prisma/client`). Antes de tocar `prisma/schema.prisma`, `prisma.config.ts` o
+`prisma/seed.ts`, verificar contra la doc oficial (`prisma.io/docs`) en vez de asumir la sintaxis
+de versiones anteriores.
 
 ## Cómo trabajar en este repo
 

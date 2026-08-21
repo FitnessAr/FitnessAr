@@ -1,6 +1,6 @@
 import { getHashColorClassName } from "@/lib/color-hash";
 
-// Paleta categórica para diferenciar avatares en listas de alumnos (no es color de marca).
+// Paleta categórica para diferenciar avatares en listas de clientes (no es color de marca).
 const PALETTE = [
   "bg-violet-500/20 text-violet-200",
   "bg-sky-500/20 text-sky-200",

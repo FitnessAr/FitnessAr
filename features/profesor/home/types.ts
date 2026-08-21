@@ -1,8 +1,8 @@
-import type { Student } from "../roster";
+import type { Client } from "../roster";
 
 export type ProfesorHomeData = {
   professorName: string;
-  totalStudents: number;
+  totalClients: number;
   totalRoutines: number;
-  activeToday: Student[];
+  activeToday: Client[];
 };

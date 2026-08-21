@@ -1,7 +1,7 @@
 # FitnessAr
 
 Plataforma web para digitalizar la asignación y el seguimiento de rutinas de entrenamiento en
-gimnasios, conectando profesores y alumnos en un flujo simple, pensado mobile-first.
+gimnasios, conectando profesores y clientes en un flujo simple, pensado mobile-first.
 
 ## Estado del proyecto
 
@@ -17,7 +17,7 @@ indicaciones personalizadas.
 
 ## Prioridad de diseño: Mobile-first
 
-Los alumnos usan la plataforma casi exclusivamente desde el celular, dentro del gimnasio. Toda
+Los clientes usan la plataforma casi exclusivamente desde el celular, dentro del gimnasio. Toda
 decisión de UI/UX debe priorizar mobile primero: usabilidad clara para todas las edades, botones
 grandes, tipografía legible, navegación simple. El rol profesor puede usarse también desde
 tablet/desktop, pero mobile sigue siendo el caso de uso principal a validar.
@@ -72,7 +72,7 @@ activar o desactivar funciones rápidamente sin partir de cero.
 | Framework | Next.js (App Router) |
 | Base de datos | PostgreSQL |
 | Backend as a Service | Supabase |
-| Autenticación | Clerk |
+| Autenticación | Propia (usuario/contraseña + roles) |
 | ORM | Prisma |
 | Media (GIFs/imágenes de ejercicios) | Cloudinary |
 | Hosting / Deploy | Vercel |

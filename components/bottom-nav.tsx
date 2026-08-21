@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, CalendarDays, ClipboardList, Home, TrendingUp, User, Users } from "lucide-react";
+import {
+  Activity,
+  CalendarDays,
+  ClipboardList,
+  Dumbbell,
+  Home,
+  Settings,
+  TrendingUp,
+  User,
+  Users,
+} from "lucide-react";
 
 // Los componentes de ícono (funciones) no se pueden pasar como prop de un Server Component a este
 // Client Component — por eso `BottomNavTab.icon` es un nombre (string, serializable) y el mapeo a
@@ -15,6 +25,8 @@ const ICONS = {
   users: Users,
   clipboard: ClipboardList,
   activity: Activity,
+  dumbbell: Dumbbell,
+  settings: Settings,
 } as const;
 
 export type BottomNavIconName = keyof typeof ICONS;
