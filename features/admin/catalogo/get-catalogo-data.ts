@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
-import { catalogMediaUrl, fetchCatalog, isCatalogConfigured } from "./catalog-api";
+import {
+  CATALOG_CACHE,
+  catalogMediaUrl,
+  fetchCatalog,
+  isCatalogConfigured,
+} from "./catalog-api";
 import type {
   CatalogExercise,
   CatalogMeta,
@@ -80,7 +85,8 @@ async function fetchFilteredPage(
   for (let batch = 0; batch < MAX_BATCHES; batch += 1) {
     const result = await fetchCatalog<{ data: ApiExercise[]; total: number }>(
       "/api/exercises",
-      listParams(filters, fetched, API_BATCH_SIZE)
+      listParams(filters, fetched, API_BATCH_SIZE),
+      CATALOG_CACHE.lists
     );
     filteredTotal = result.total;
     fetched += result.data.length;
@@ -125,8 +131,8 @@ export async function getCatalogoData(
       select: { catalogId: true },
       orderBy: { createdAt: "asc" },
     }),
-    fetchCatalog<{ total: number }>("/api/exercises", { limit: "0" }),
-    fetchCatalog<{ data: CatalogMeta }>("/api/exercises/meta"),
+    fetchCatalog<{ total: number }>("/api/exercises", { limit: "0" }, CATALOG_CACHE.meta),
+    fetchCatalog<{ data: CatalogMeta }>("/api/exercises/meta", undefined, CATALOG_CACHE.meta),
   ]);
 
   const includedSet = new Set(includedRows.map((row) => row.catalogId));

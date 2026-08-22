@@ -8,12 +8,10 @@ import type { CatalogExercise } from "./types";
 export function EjercicioRow({
   exercise,
   included,
-  pending,
   onToggle,
 }: {
   exercise: CatalogExercise;
   included: boolean;
-  pending: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -57,7 +55,6 @@ export function EjercicioRow({
       )}
       <ToggleSwitch
         checked={included}
-        disabled={pending}
         onChange={onToggle}
         ariaLabel={
           included

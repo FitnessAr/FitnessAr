@@ -4,9 +4,24 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/features/admin/require-admin";
-import { fetchCatalog, isCatalogConfigured } from "./catalog-api";
+import { CATALOG_CACHE, fetchCatalog, isCatalogConfigured } from "./catalog-api";
 
-export type ToggleExerciseResult = { ok: true } | { ok: false; error: string };
+export type ToggleItemResult = { ok: true } | { ok: false; error: string };
+export type ToggleOp = { catalogId: string; include: boolean };
+
+// Resultado de un lote: una entrada por operación, en cualquier orden (el cliente matchea por id).
+export type ApplyTogglesResult = {
+  results: Array<{ catalogId: string } & ToggleItemResult>;
+};
+
+export type ToggleExerciseResult = ToggleItemResult;
+
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,10}$/;
+// Techo defensivo del lote: la cola del cliente flushea pocas operaciones, pero nunca aceptar
+// un array gigante desde un cliente manipulado.
+const MAX_OPS = 50;
+// Detalles pedidos a la API en paralelo por chunk para no golpear el catálogo externo.
+const DETAIL_CHUNK_SIZE = 8;
 
 // Detalle que devuelve la API con lang=es (instructions/instructionSteps recortados a español).
 type ApiExerciseDetail = {
@@ -64,85 +79,185 @@ function toSnapshot(branchId: string, detail: ApiExerciseDetail) {
   };
 }
 
-// Interruptor de cada card del catálogo: incluir = crear la fila Exercise local; quitar =
-// borrarla. El snapshot completo no viaja por el cliente — al incluir se pide el detalle fresco
-// a la API (/api/exercises/:id?lang=es), así la fila local queda fiel a la fuente.
+// Interruptor de las cards del catálogo, en LOTE: incluir = crear filas Exercise locales; quitar
+// = borrarlas. Un solo round-trip para N toggles (la UI encola clicks y flushea acá): 1 auth,
+// 1 query de estado/uso para todos los ids, detalles pedidos en paralelo por chunks y un único
+// createMany/deleteMany + revalidatePath.
 //
 // La fila local es la que usan las rutinas (RoutineExercise.exercise, onDelete: Restrict) y el
 // historial (SessionExercise): un ejercicio en uso NO se puede quitar — se bloquea con mensaje
-// en vez de dejar romper rutinas activas.
-export async function toggleExerciseAction(
-  include: boolean,
-  catalogId: string
-): Promise<ToggleExerciseResult> {
+// por ítem en vez de dejar romper rutinas activas.
+export async function applyTogglesAction(ops: ToggleOp[]): Promise<ApplyTogglesResult> {
+  const results: ApplyTogglesResult["results"] = [];
+
+  if (!Array.isArray(ops) || ops.length === 0) {
+    return { results };
+  }
+
+  const batch = ops.slice(0, MAX_OPS);
+
   const admin = await requireAdmin();
 
-  // Hoy los ids son numéricos de 4 dígitos ("0001"), pero el schema reserva hasta 10 caracteres.
-  const id = String(catalogId ?? "").trim();
-  if (!/^[A-Za-z0-9_-]{1,10}$/.test(id)) {
-    return { ok: false, error: "Id de ejercicio inválido." };
-  }
   if (!isCatalogConfigured()) {
+    const error =
+      "El catálogo global no está configurado (CATALOG_API_URL / CATALOG_API_KEY).";
     return {
-      ok: false,
-      error:
-        "El catálogo global no está configurado (CATALOG_API_URL / CATALOG_API_KEY).",
+      results: batch.map((op) => ({
+        catalogId: String(op?.catalogId ?? ""),
+        ok: false as const,
+        error,
+      })),
     };
   }
 
-  const existing = await prisma.exercise.findUnique({
-    where: {
-      branchId_catalogId: { branchId: admin.branchId, catalogId: id },
-    },
+  // Dedupe por id (último valor gana): si el usuario toca dos veces la misma card antes del
+  // flush, solo importa el estado final.
+  const byId = new Map<string, boolean>();
+  for (const op of batch) {
+    const id = String(op?.catalogId ?? "").trim();
+    byId.set(id, Boolean(op?.include));
+  }
+
+  // Hoy los ids son numéricos de 4 dígitos ("0001"), pero el schema reserva hasta 10 caracteres.
+  const valid = new Map<string, boolean>();
+  for (const [id, include] of byId) {
+    if (ID_PATTERN.test(id)) {
+      valid.set(id, include);
+    } else {
+      results.push({ catalogId: id, ok: false, error: "Id de ejercicio inválido." });
+    }
+  }
+  if (valid.size === 0) return { results };
+
+  // Estado + uso actual de todos los ids en UNA query.
+  const existingRows = await prisma.exercise.findMany({
+    where: { branchId: admin.branchId, catalogId: { in: [...valid.keys()] } },
     select: {
       id: true,
+      catalogId: true,
       name: true,
       _count: { select: { routineExercises: true, sessionExercises: true } },
     },
   });
+  const existingByCatalogId = new Map(existingRows.map((row) => [row.catalogId, row]));
 
-  if (include && existing) {
-    return { ok: true }; // ya está incluido: nada que hacer
-  }
+  let mutated = false;
+  const deleteCatalogIds: string[] = [];
+  const createIds: string[] = [];
 
-  if (!include) {
-    if (!existing) {
-      return { ok: true }; // ya no está incluido: nada que hacer
+  for (const [id, include] of valid) {
+    const existing = existingByCatalogId.get(id);
+
+    if (include) {
+      if (existing) {
+        results.push({ catalogId: id, ok: true }); // ya está incluido: nada que hacer
+      } else {
+        createIds.push(id);
+      }
+      continue;
     }
 
-    const usage =
-      existing._count.routineExercises + existing._count.sessionExercises;
+    if (!existing) {
+      results.push({ catalogId: id, ok: true }); // ya no está incluido: nada que hacer
+      continue;
+    }
+
+    const usage = existing._count.routineExercises + existing._count.sessionExercises;
     if (usage > 0) {
-      return {
+      results.push({
+        catalogId: id,
         ok: false,
         error:
           `«${existing.name}» está siendo usado en ${existing._count.routineExercises} rutina(s) ` +
           `y ${existing._count.sessionExercises} entrenamiento(s) registrado(s). Primero quitálo ` +
           `de ahí si querés sacarlo del catálogo.`,
-      };
+      });
+      continue;
     }
-
-    await prisma.exercise.delete({ where: { id: existing.id } });
-  } else {
-    const response = await fetchCatalog<{ data: ApiExerciseDetail }>(
-      `/api/exercises/${id}`,
-      { lang: "es" }
-    );
-    const detail = response.data;
-    if (!detail?.id || !detail.name) {
-      return { ok: false, error: "El catálogo no devolvió el detalle del ejercicio." };
-    }
-
-    const snapshot = toSnapshot(admin.branchId, detail);
-    await prisma.exercise.upsert({
-      where: {
-        branchId_catalogId: { branchId: admin.branchId, catalogId: id },
-      },
-      create: snapshot,
-      update: snapshot,
-    });
+    deleteCatalogIds.push(id);
   }
 
-  revalidatePath("/admin/ejercicios");
-  return { ok: true };
+  if (deleteCatalogIds.length > 0) {
+    // catalogId → id interno de la fila local (el delete es por PK).
+    const rowIds = deleteCatalogIds
+      .map((catalogId) => existingByCatalogId.get(catalogId)?.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (rowIds.length > 0) {
+      await prisma.exercise.deleteMany({ where: { id: { in: rowIds } } });
+      mutated = true;
+    }
+    for (const catalogId of deleteCatalogIds) {
+      results.push({ catalogId, ok: true });
+    }
+  }
+
+  if (createIds.length > 0) {
+    // El snapshot completo no viaja por el cliente — a cada incluido nuevo se le pide el detalle
+    // fresco a la API (/api/exercises/:id?lang=es), así la fila local queda fiel a la fuente.
+    const details = await fetchDetails(createIds);
+    const snapshots: Prisma.ExerciseCreateManyInput[] = [];
+
+    for (const id of createIds) {
+      const detail = details.get(id);
+      if (!detail?.id || !detail.name) {
+        results.push({
+          catalogId: id,
+          ok: false,
+          error: "El catálogo no devolvió el detalle del ejercicio.",
+        });
+        continue;
+      }
+      snapshots.push(toSnapshot(admin.branchId, detail));
+      results.push({ catalogId: id, ok: true });
+    }
+
+    if (snapshots.length > 0) {
+      await prisma.exercise.createMany({ data: snapshots, skipDuplicates: true });
+      mutated = true;
+    }
+  }
+
+  if (mutated) {
+    revalidatePath("/admin/ejercicios");
+  }
+
+  return { results };
+}
+
+async function fetchDetails(ids: string[]): Promise<Map<string, ApiExerciseDetail | null>> {
+  const details = new Map<string, ApiExerciseDetail | null>();
+
+  for (let index = 0; index < ids.length; index += DETAIL_CHUNK_SIZE) {
+    const chunk = ids.slice(index, index + DETAIL_CHUNK_SIZE);
+    const settled = await Promise.all(
+      chunk.map(async (id): Promise<[string, ApiExerciseDetail | null]> => {
+        try {
+          const response = await fetchCatalog<{ data: ApiExerciseDetail }>(
+            `/api/exercises/${id}`,
+            { lang: "es" },
+            CATALOG_CACHE.meta
+          );
+          return [id, response.data];
+        } catch {
+          return [id, null];
+        }
+      })
+    );
+    for (const [id, detail] of settled) details.set(id, detail);
+  }
+
+  return details;
+}
+
+// Toggle individual (ficha de detalle): delega en la versión por lotes.
+export async function toggleExerciseAction(
+  include: boolean,
+  catalogId: string
+): Promise<ToggleExerciseResult> {
+  const result = await applyTogglesAction([{ catalogId, include }]);
+  const item = result.results[0];
+
+  if (!item) return { ok: false, error: "No se pudo aplicar el cambio." };
+  return item.ok ? { ok: true } : { ok: false, error: item.error };
 }

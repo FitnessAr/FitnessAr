@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import {
+  CATALOG_CACHE,
   catalogMediaUrl,
   fetchCatalog,
   isCatalogConfigured,
@@ -120,7 +121,8 @@ export async function getEjercicioDetalle(
   try {
     const response = await fetchCatalog<{ data: ApiExerciseDetail }>(
       `/api/exercises/${id}`,
-      { lang: "es" }
+      { lang: "es" },
+      CATALOG_CACHE.meta
     );
     apiDetail = response.data;
   } catch {

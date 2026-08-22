@@ -9,12 +9,10 @@ import type { CatalogExercise } from "./types";
 export function EjercicioCard({
   exercise,
   included,
-  pending,
   onToggle,
 }: {
   exercise: CatalogExercise;
   included: boolean;
-  pending: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -64,7 +62,6 @@ export function EjercicioCard({
           </span>
           <ToggleSwitch
             checked={included}
-            disabled={pending}
             onChange={onToggle}
             ariaLabel={
               included
