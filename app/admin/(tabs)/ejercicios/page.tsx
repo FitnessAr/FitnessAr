@@ -15,6 +15,8 @@ function firstValue(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value) ?? "";
 }
 
+// Los searchParams solo alimentan el estado inicial de los filtros; después viven en el
+// cliente (CatalogoScreen los mantiene sincronizados con la URL vía history.replaceState).
 function parseFilters(
   searchParams: Record<string, string | string[] | undefined>
 ): CatalogoFilters {
@@ -48,7 +50,7 @@ export default async function EjerciciosPage({
   let errorMessage: string | undefined;
 
   try {
-    data = await getCatalogoData(admin.branchId, filters);
+    data = await getCatalogoData(admin.branchId);
   } catch (error) {
     // Falla la API del catálogo o falta config: se muestra el banner con Reintentar
     // en vez de romper toda la pestaña.
@@ -58,5 +60,11 @@ export default async function EjerciciosPage({
         : "No se pudo conectar con el catálogo global.";
   }
 
-  return <CatalogoScreen data={data} filters={filters} error={errorMessage} />;
+  return (
+    <CatalogoScreen
+      data={data}
+      initialFilters={filters}
+      error={errorMessage}
+    />
+  );
 }

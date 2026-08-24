@@ -1,6 +1,6 @@
-// Skeletons con la forma de cada vista del catálogo: se muestran mientras la navegación por
-// filtros trae los resultados nuevos (el contenido anterior se reemplaza para que no haya
-// parpadeo de layout). aria-hidden: es decorativo, el spinner junto a los conteos anuncia carga.
+// Skeletons con la forma de cada vista del catálogo. Hoy los usa el loading.tsx de la ruta:
+// al navegar hacia /admin/ejercicios, este fallback aparece AL INSTANTE mientras el server
+// arma la página completa (catálogo entero + estado de inclusión). aria-hidden: decorativo.
 export function CatalogoSkeleton({ vista }: { vista: "cards" | "lista" }) {
   if (vista === "lista") {
     return (
@@ -38,7 +38,7 @@ export function CatalogoSkeleton({ vista }: { vista: "cards" | "lista" }) {
             <div className="h-3 w-2/5 animate-pulse rounded-full bg-surface-elevated" />
             <div className="mt-1 flex items-center justify-between">
               <div className="h-4 w-16 animate-pulse rounded-full bg-surface-elevated" />
-              <div className="h-6 w-10 animate-pulse rounded-full bg-surface-elevated" />
+              <div className="h-6 w-10 shrink-0 animate-pulse rounded-full bg-surface-elevated" />
             </div>
           </div>
         </div>

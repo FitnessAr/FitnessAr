@@ -18,7 +18,7 @@ export function EjercicioCard({
 }) {
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-2xl border bg-surface transition-colors ${
+      className={`flex h-full flex-col overflow-hidden rounded-2xl border bg-surface transition-colors ${
         included ? "border-brand/60" : "border-border"
       }`}
     >

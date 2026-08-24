@@ -5,21 +5,13 @@ import {
   fetchCatalog,
   isCatalogConfigured,
 } from "./catalog-api";
-import type {
-  CatalogExercise,
-  CatalogMeta,
-  CatalogoData,
-  CatalogoEstado,
-  CatalogoFilters,
-} from "./types";
+import type { CatalogExercise, CatalogMeta, CatalogoData } from "./types";
 
-// Tamaño de página visible ("Cargar más" agrega una página por click).
-export const PAGE_SIZE = 24;
-// Máximo que acepta la API por request (clamp interno del catálogo).
+// Tamaño de página que acepta la API por request (clamp interno del catálogo).
 const API_BATCH_SIZE = 100;
-// Techo defensivo anti-loop: el catálogo hoy tiene ~1324 ejercicios; si algún día crece mucho
-// más que esto, el recorrido con filtro de estado se corta igual (y matchedTotal queda null).
-const MAX_BATCHES = 30;
+// Techo defensivo anti-explosión de payload: el catálogo hoy tiene ~1324 ejercicios; si algún
+// día creara órdenes de magnitud más, se corta igual (y counts.total refleja lo traído).
+const MAX_ITEMS = 5000;
 
 type ApiExercise = {
   id: string;
@@ -45,101 +37,70 @@ function toCatalogExercise(raw: ApiExercise): CatalogExercise {
   };
 }
 
-function listParams(filters: CatalogoFilters, offset: number, limit: number) {
-  const params: Record<string, string> = {
-    lang: "es",
-    offset: String(offset),
-    limit: String(limit),
-  };
-  if (filters.q) params.q = filters.q;
-  if (filters.category) params.category = filters.category;
-  if (filters.equipment) params.equipment = filters.equipment;
-  if (filters.target) params.target = filters.target;
-  return params;
-}
+// Trae el catálogo COMPLETO en batches: la primera página da el total real y las restantes se
+// piden en paralelo. Cada URL (offset distinto) queda cacheada individualmente por el Data
+// Cache con el mismo TTL, así que en caliente esto no golpea la API externa.
+async function fetchAllExercises(): Promise<CatalogExercise[]> {
+  const first = await fetchCatalog<{ data: ApiExercise[]; total: number }>(
+    "/api/exercises",
+    { lang: "es", offset: "0", limit: String(API_BATCH_SIZE) },
+    CATALOG_CACHE.lists
+  );
 
-function passesEstado(
-  estado: CatalogoEstado,
-  isIncluded: boolean
-): boolean {
-  if (estado === "incluidos") return isIncluded;
-  if (estado === "excluidos") return !isIncluded;
-  return true;
-}
-
-// Recorre la lista filtrada de la API en batches hasta juntar los items visibles de la página
-// acumulada. Con estado = todos corta apenas alcanza (casi siempre 1 request); con incluidos/
-// excluidos tiene que recorrer todo para saber el conteo exacto y paginar bien.
-async function fetchFilteredPage(
-  filters: CatalogoFilters,
-  includedSet: Set<string>
-): Promise<Pick<CatalogoData, "exercises" | "filteredTotal" | "matchedTotal" | "hasMore">> {
-  const wantThrough = filters.page * PAGE_SIZE;
-
-  const matches: CatalogExercise[] = [];
-  let filteredTotal = 0;
-  let fetched = 0;
-
-  for (let batch = 0; batch < MAX_BATCHES; batch += 1) {
-    const result = await fetchCatalog<{ data: ApiExercise[]; total: number }>(
-      "/api/exercises",
-      listParams(filters, fetched, API_BATCH_SIZE),
-      CATALOG_CACHE.lists
-    );
-    filteredTotal = result.total;
-    fetched += result.data.length;
-
-    for (const raw of result.data) {
-      const exercise = toCatalogExercise(raw);
-      if (passesEstado(filters.estado, includedSet.has(exercise.id))) {
-        matches.push(exercise);
-      }
-    }
-
-    // Sin estado, el filtro no descarta nada: alcanza con llegar a la página pedida.
-    if (filters.estado === "todos" && matches.length >= wantThrough) break;
-    if (result.data.length < API_BATCH_SIZE || fetched >= result.total) break;
+  const total = Math.min(first.total, MAX_ITEMS);
+  const offsets: number[] = [];
+  for (let offset = first.data.length; offset < total; offset += API_BATCH_SIZE) {
+    offsets.push(offset);
   }
 
-  // Solo se puede garantizar el conteo exacto si se recorrió la fuente completa (con filtro de
-  // estado el recorrido siempre llega hasta el final; con "todos" suele cortarse en la página).
-  const sourceExhausted = fetched >= filteredTotal;
+  // Una página fallida no tumba la carga entera: entra vacía y el catálogo queda recortado
+  // hasta el próximo refresh con caché fresca.
+  const pages = await Promise.all(
+    offsets.map((offset) =>
+      fetchCatalog<{ data: ApiExercise[] }>(
+        "/api/exercises",
+        { lang: "es", offset: String(offset), limit: String(API_BATCH_SIZE) },
+        CATALOG_CACHE.lists
+      )
+        .then((result) => result.data)
+        .catch(() => [] as ApiExercise[])
+    )
+  );
 
-  return {
-    exercises: matches.slice(0, wantThrough),
-    filteredTotal,
-    matchedTotal: sourceExhausted ? matches.length : null,
-    hasMore: matches.length > wantThrough || (matches.length === wantThrough && !sourceExhausted),
-  };
+  // Dedupe por id (defensivo): si el catálogo cambia entre requests, las páginas podrían solapar.
+  const byId = new Map<string, CatalogExercise>();
+  for (const raw of [...first.data, ...pages.flat()]) {
+    if (byId.size >= MAX_ITEMS) break;
+    if (!byId.has(raw.id)) byId.set(raw.id, toCatalogExercise(raw));
+  }
+  return [...byId.values()];
 }
 
-export async function getCatalogoData(
-  branchId: string,
-  filters: CatalogoFilters
-): Promise<CatalogoData> {
+export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
   if (!isCatalogConfigured()) {
     throw new Error(
       "Faltan las variables de entorno CATALOG_API_URL / CATALOG_API_KEY."
     );
   }
 
-  const [includedRows, grandTotal, meta] = await Promise.all([
+  const [includedRows, exercises, meta] = await Promise.all([
     prisma.exercise.findMany({
       where: { branchId },
       select: { catalogId: true },
       orderBy: { createdAt: "asc" },
     }),
-    fetchCatalog<{ total: number }>("/api/exercises", { limit: "0" }, CATALOG_CACHE.meta),
-    fetchCatalog<{ data: CatalogMeta }>("/api/exercises/meta", undefined, CATALOG_CACHE.meta),
+    fetchAllExercises(),
+    fetchCatalog<{ data: CatalogMeta }>(
+      "/api/exercises/meta",
+      undefined,
+      CATALOG_CACHE.meta
+    ),
   ]);
 
-  const includedSet = new Set(includedRows.map((row) => row.catalogId));
-  const page = await fetchFilteredPage(filters, includedSet);
-
   return {
-    ...page,
+    exercises,
     meta: meta.data,
-    counts: { total: grandTotal.total, incluidos: includedSet.size },
-    includedIds: [...includedSet],
+    counts: { total: exercises.length },
+    includedIds: includedRows.map((row) => row.catalogId),
   };
 }
