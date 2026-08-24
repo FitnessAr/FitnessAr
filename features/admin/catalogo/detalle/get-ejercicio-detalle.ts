@@ -112,6 +112,7 @@ export async function getEjercicioDetalle(
         attribution: localRow.attribution,
       }),
       isIncluded: true,
+      isCustom: localRow.isCustom,
     };
   }
 
@@ -147,5 +148,6 @@ export async function getEjercicioDetalle(
       attribution: apiDetail.attribution ?? null,
     }),
     isIncluded: false,
+    isCustom: false,
   };
 }

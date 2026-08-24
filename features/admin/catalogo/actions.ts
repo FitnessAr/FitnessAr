@@ -136,6 +136,7 @@ export async function applyTogglesAction(ops: ToggleOp[]): Promise<ApplyTogglesR
       id: true,
       catalogId: true,
       name: true,
+      isCustom: true,
       _count: { select: { routineExercises: true, sessionExercises: true } },
     },
   });
@@ -157,7 +158,9 @@ export async function applyTogglesAction(ops: ToggleOp[]): Promise<ApplyTogglesR
       continue;
     }
 
-    if (!existing) {
+    // Defensiva: los ejercicios propios (isCustom) NO se tocan por acá — se administran con
+    // update/deleteCustomExerciseAction. Un toggle-off sobre su id es un no-op.
+    if (!existing || existing.isCustom) {
       results.push({ catalogId: id, ok: true }); // ya no está incluido: nada que hacer
       continue;
     }

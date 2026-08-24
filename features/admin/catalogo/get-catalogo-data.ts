@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import {
   CATALOG_CACHE,
   catalogMediaUrl,
@@ -7,10 +7,10 @@ import {
 } from "./catalog-api";
 import type { CatalogExercise, CatalogMeta, CatalogoData } from "./types";
 
-// Tamaño de página que acepta la API por request (clamp interno del catálogo).
+// TamaÃ±o de pÃ¡gina que acepta la API por request (clamp interno del catÃ¡logo).
 const API_BATCH_SIZE = 100;
-// Techo defensivo anti-explosión de payload: el catálogo hoy tiene ~1324 ejercicios; si algún
-// día creara órdenes de magnitud más, se corta igual (y counts.total refleja lo traído).
+// Techo defensivo anti-explosiÃ³n de payload: el catÃ¡logo hoy tiene ~1324 ejercicios; si algÃºn
+// dÃ­a creara Ã³rdenes de magnitud mÃ¡s, se corta igual (y counts.total refleja lo traÃ­do).
 const MAX_ITEMS = 5000;
 
 type ApiExercise = {
@@ -37,9 +37,9 @@ function toCatalogExercise(raw: ApiExercise): CatalogExercise {
   };
 }
 
-// Trae el catálogo COMPLETO en batches: la primera página da el total real y las restantes se
+// Trae el catÃ¡logo COMPLETO en batches: la primera pÃ¡gina da el total real y las restantes se
 // piden en paralelo. Cada URL (offset distinto) queda cacheada individualmente por el Data
-// Cache con el mismo TTL, así que en caliente esto no golpea la API externa.
+// Cache con el mismo TTL, asÃ­ que en caliente esto no golpea la API externa.
 async function fetchAllExercises(): Promise<CatalogExercise[]> {
   const first = await fetchCatalog<{ data: ApiExercise[]; total: number }>(
     "/api/exercises",
@@ -53,8 +53,8 @@ async function fetchAllExercises(): Promise<CatalogExercise[]> {
     offsets.push(offset);
   }
 
-  // Una página fallida no tumba la carga entera: entra vacía y el catálogo queda recortado
-  // hasta el próximo refresh con caché fresca.
+  // Una pÃ¡gina fallida no tumba la carga entera: entra vacÃ­a y el catÃ¡logo queda recortado
+  // hasta el prÃ³ximo refresh con cachÃ© fresca.
   const pages = await Promise.all(
     offsets.map((offset) =>
       fetchCatalog<{ data: ApiExercise[] }>(
@@ -67,13 +67,40 @@ async function fetchAllExercises(): Promise<CatalogExercise[]> {
     )
   );
 
-  // Dedupe por id (defensivo): si el catálogo cambia entre requests, las páginas podrían solapar.
+  // Dedupe por id (defensivo): si el catÃ¡logo cambia entre requests, las pÃ¡ginas podrÃ­an solapar.
   const byId = new Map<string, CatalogExercise>();
   for (const raw of [...first.data, ...pages.flat()]) {
     if (byId.size >= MAX_ITEMS) break;
     if (!byId.has(raw.id)) byId.set(raw.id, toCatalogExercise(raw));
   }
   return [...byId.values()];
+}
+
+// Los ejercicios propios (isCustom=true) viven SOLO en la tabla local: se traen aparte y se
+// anteponen al catÃ¡logo global para que sean lo primero que se ve.
+function customRowToCatalogExercise(
+  row: {
+    catalogId: string;
+    name: string;
+    category: string | null;
+    equipment: string | null;
+    muscleGroup: string | null;
+    target: string | null;
+    gifUrl: string | null;
+  }
+): CatalogExercise {
+  return {
+    id: row.catalogId,
+    name: row.name,
+    category: row.category,
+    bodyPart: null,
+    equipment: row.equipment,
+    muscleGroup: row.muscleGroup,
+    target: row.target,
+    // La URL de Supabase Storage ya es absoluta https â€” no necesita resoluciÃ³n.
+    gifUrl: row.gifUrl,
+    isCustom: true,
+  };
 }
 
 export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
@@ -83,10 +110,10 @@ export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
     );
   }
 
-  const [includedRows, exercises, meta] = await Promise.all([
+  const [exerciseRows, exercises, meta] = await Promise.all([
     prisma.exercise.findMany({
       where: { branchId },
-      select: { catalogId: true },
+      select: { catalogId: true, isCustom: true },
       orderBy: { createdAt: "asc" },
     }),
     fetchAllExercises(),
@@ -97,10 +124,42 @@ export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
     ),
   ]);
 
+  // Customs + incluidos del catÃ¡logo en UNA query mÃ¡s (evita un segundo round-trip a la BD).
+  const customIds = new Set(
+    exerciseRows.filter((row) => row.isCustom).map((row) => row.catalogId)
+  );
+  // Los customs cuentan como incluidos: estÃ¡n materializados en la tabla local por definiciÃ³n
+  // (asÃ­ el filtro de estado y las pills los clasifican bien).
+  const includedIds = [
+    ...customIds,
+    ...exerciseRows
+      .filter((row) => !row.isCustom)
+      .map((row) => row.catalogId),
+  ];
+
+  let customs: CatalogExercise[] = [];
+  if (customIds.size > 0) {
+    customs = (
+      await prisma.exercise.findMany({
+        where: { branchId, catalogId: { in: [...customIds] } },
+        select: {
+          catalogId: true,
+          name: true,
+          category: true,
+          equipment: true,
+          muscleGroup: true,
+          target: true,
+          gifUrl: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    ).map(customRowToCatalogExercise);
+  }
+
   return {
-    exercises,
+    exercises: [...customs, ...exercises],
     meta: meta.data,
-    counts: { total: exercises.length },
-    includedIds: includedRows.map((row) => row.catalogId),
+    counts: { total: customs.length + exercises.length },
+    includedIds,
   };
 }

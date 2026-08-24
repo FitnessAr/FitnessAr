@@ -25,4 +25,7 @@ export type EjercicioDetalle = {
 export type EjercicioDetalleData = {
   detalle: EjercicioDetalle;
   isIncluded: boolean;
+  // true = ejercicio propio creado por el admin: la ficha muestra Editar/Eliminar en vez del
+  // toggle de inclusión.
+  isCustom: boolean;
 };

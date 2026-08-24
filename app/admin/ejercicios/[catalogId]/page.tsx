@@ -7,11 +7,13 @@ import {
 } from "@/features/admin/catalogo/detalle/get-ejercicio-detalle";
 import { EjercicioDetalleScreen } from "@/features/admin/catalogo/detalle/ejercicio-detalle-screen";
 import { ToggleIncluido } from "@/features/admin/catalogo/detalle/toggle-incluido";
+import { CustomExerciseActions } from "@/features/admin/catalogo/detalle/custom-exercise-actions";
 import { ReintentarButton } from "@/features/admin/catalogo/detalle/reintentar-button";
 
 // Ficha del ejercicio: estado de inclusión (toggle real, no placeholder) + ficha técnica
 // completa. Datos: primero la fila local de la sucursal; si el ejercicio no está incluido,
-// preview directo contra la API del catálogo global (getEjercicioDetalle).
+// preview directo contra la API del catálogo global (getEjercicioDetalle). Los ejercicios
+// propios (isCustom) muestran Editar/Eliminar en lugar del toggle.
 export default async function EjercicioDetallePage({
   params,
 }: PageProps<"/admin/ejercicios/[catalogId]">) {
@@ -33,11 +35,18 @@ export default async function EjercicioDetallePage({
 
       {data ? (
         <>
-          <ToggleIncluido
-            catalogId={data.detalle.id}
-            name={data.detalle.name}
-            included={data.isIncluded}
-          />
+          {data.isCustom ? (
+            <CustomExerciseActions
+              catalogId={data.detalle.id}
+              name={data.detalle.name}
+            />
+          ) : (
+            <ToggleIncluido
+              catalogId={data.detalle.id}
+              name={data.detalle.name}
+              included={data.isIncluded}
+            />
+          )}
           <EjercicioDetalleScreen detalle={data.detalle} />
         </>
       ) : CATALOG_ID_PATTERN.test(catalogId) ? (

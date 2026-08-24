@@ -17,11 +17,13 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ChevronDown,
   LayoutGrid,
   List,
   Loader2,
+  Plus,
   RotateCcw,
   Search,
   X,
@@ -30,6 +32,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { EjercicioCard } from "./ejercicio-card";
 import { EjercicioRow } from "./ejercicio-row";
 import { usePendingToggles } from "./use-pending-toggles";
+import { deleteCustomExerciseAction } from "./custom-actions";
 import { ToastStack, useToasts } from "@/components/toast";
 import type {
   CatalogExercise,
@@ -119,6 +122,22 @@ export function CatalogoScreen({
   }, []);
 
   const allExercises = useMemo(() => data?.exercises ?? [], [data?.exercises]);
+
+  // Borrado de un ejercicio propio (solo customs exponen el botón): confirmación nativa,
+  // acción de server y refresco del listado; error → toast.
+  async function handleDeleteCustom(exercise: CatalogExercise) {
+    if (
+      !window.confirm(`¿Eliminar «${exercise.name}»? Esta acción no se puede deshacer.`)
+    ) {
+      return;
+    }
+    const result = await deleteCustomExerciseAction(exercise.id);
+    if (!result.ok) {
+      pushToast(result.error);
+      return;
+    }
+    startRefresh(() => router.refresh());
+  }
 
   // Filtrado local: búsqueda por nombre + selects + estado (contra el set efectivo de
   // incluidos, que ya contempla toggles pendientes de guardar).
@@ -210,7 +229,15 @@ export function CatalogoScreen({
           </h1>
         </div>
 
-        <div className="flex shrink-0 items-center rounded-full bg-surface-elevated p-1">
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/admin/ejercicios/nuevo"
+            className="flex min-h-9 items-center gap-1 rounded-full bg-brand px-3 text-[11px] font-extrabold uppercase tracking-wide text-brand-foreground transition-opacity active:opacity-80"
+          >
+            <Plus className="h-4 w-4" />
+            Crear
+          </Link>
+          <div className="flex items-center rounded-full bg-surface-elevated p-1">
           <button
             type="button"
             title="Vista tarjetas"
@@ -239,6 +266,7 @@ export function CatalogoScreen({
           >
             <List className="h-4 w-4" />
           </button>
+          </div>
         </div>
       </div>
 
@@ -385,6 +413,11 @@ export function CatalogoScreen({
                       exercise={exercise}
                       included={effectiveIncluded.has(exercise.id)}
                       onToggle={() => toggle(exercise.id)}
+                      onDelete={
+                        exercise.isCustom
+                          ? () => void handleDeleteCustom(exercise)
+                          : undefined
+                      }
                     />
                   </motion.div>
                 ))}
@@ -404,6 +437,11 @@ export function CatalogoScreen({
                       exercise={exercise}
                       included={effectiveIncluded.has(exercise.id)}
                       onToggle={() => toggle(exercise.id)}
+                      onDelete={
+                        exercise.isCustom
+                          ? () => void handleDeleteCustom(exercise)
+                          : undefined
+                      }
                     />
                   </motion.div>
                 ))}

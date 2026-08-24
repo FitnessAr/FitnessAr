@@ -24,7 +24,7 @@ export function EjercicioDetalleScreen({ detalle }: { detalle: EjercicioDetalle 
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center">
-              <span className="text-xs text-ink-muted">Sin animación</span>
+              <span className="text-xs text-ink-muted">Sin imagen</span>
             </div>
           )}
         </div>

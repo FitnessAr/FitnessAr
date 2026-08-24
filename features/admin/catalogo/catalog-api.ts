@@ -55,7 +55,9 @@ export async function fetchCatalog<T>(
 }
 
 // gifUrl/image vienen como paths relativos al deploy del catálogo ("videos/0001-xxx.gif").
+// Los ejercicios propios guardan URLs absolutas (Supabase Storage): esas pasan intactas.
 export function catalogMediaUrl(relativePath: string | null | undefined): string | null {
   if (!relativePath) return null;
+  if (/^https?:\/\//i.test(relativePath)) return relativePath;
   return `${BASE_URL.replace(/\/+$/, "")}/${relativePath.replace(/^\/+/, "")}`;
 }

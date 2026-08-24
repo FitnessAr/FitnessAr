@@ -15,7 +15,25 @@ export type CatalogExercise = {
   muscleGroup: string | null;
   target: string | null;
   gifUrl: string | null;
+  // true = creado por el admin (tabla Exercise con isCustom=true): se puede editar y borrar,
+  // y en vez de toggle de inclusión muestra acciones de edición/eliminación.
+  isCustom?: boolean;
 };
+
+// Payload del formulario de alta/edición de ejercicio propio (lo arma el client y lo consume
+// createCustomExerciseAction / updateCustomExerciseAction). La media NO viaja acá: el GIF se
+// sube antes por /api/ejercicios/media y llega como gifUrl ya resuelto.
+export type CustomExerciseInput = {
+  name: string;
+  category: string;
+  equipment: string;
+  target: string;
+  // Valores del catálogo global (mismo vocabulario); vacío = sin secundarios.
+  secondaryMuscles: string[];
+  instructionSteps: string[];
+  gifUrl: string | null;
+};
+
 
 export type CatalogFilterOption = { value: string; count: number };
 

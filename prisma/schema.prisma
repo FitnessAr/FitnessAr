@@ -135,6 +135,9 @@ model Exercise {
   image            String?           @db.VarChar(500)
   gifUrl           String?           @map("gif_url") @db.VarChar(500)
   attribution      String?           @db.VarChar(500)
+  // true = ejercicio creado desde la vista de administración (no viene del catálogo global):
+  // puede editarse y borrarse, y su catalogId es sintético ("cus_XXXXXX").
+  isCustom         Boolean           @default(false) @map("is_custom")
   branch           Branch            @relation(fields: [branchId], references: [id])
   routineExercises RoutineExercise[]
   sessionExercises SessionExercise[]

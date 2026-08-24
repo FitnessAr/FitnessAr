@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { ToggleSwitch } from "./toggle-switch";
 import { formatLabel } from "./filter-labels";
 import type { CatalogExercise } from "./types";
 
 // Card del catálogo (vista grilla): gif + nombre + músculo principal + equipo + interruptor.
+// Los ejercicios propios (isCustom) muestran un botón eliminar en vez del interruptor: no se
+// incluyen/quitan del catálogo, simplemente existen y se borran explícitamente.
 export function EjercicioCard({
   exercise,
   included,
   onToggle,
+  onDelete,
 }: {
   exercise: CatalogExercise;
   included: boolean;
   onToggle: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <div
@@ -36,7 +40,7 @@ export function EjercicioCard({
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-xs text-ink-muted">
-            Sin animación
+            Sin imagen
           </span>
         )}
         {included && (
@@ -67,15 +71,27 @@ export function EjercicioCard({
               ? formatLabel(exercise.equipment)
               : "sin equipo"}
           </span>
-          <ToggleSwitch
-            checked={included}
-            onChange={onToggle}
-            ariaLabel={
-              included
-                ? `Quitar ${exercise.name} del catálogo`
-                : `Incluir ${exercise.name} en el catálogo`
-            }
-          />
+          {exercise.isCustom && onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Eliminar ${exercise.name}`}
+              title="Eliminar ejercicio"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-elevated text-ink-muted transition-colors hover:text-danger"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : (
+            <ToggleSwitch
+              checked={included}
+              onChange={onToggle}
+              ariaLabel={
+                included
+                  ? `Quitar ${exercise.name} del catálogo`
+                  : `Incluir ${exercise.name} en el catálogo`
+              }
+            />
+          )}
         </div>
       </div>
     </div>
