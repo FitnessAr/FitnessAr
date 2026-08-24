@@ -52,10 +52,8 @@ function listParams(filters: CatalogoFilters, offset: number, limit: number) {
     limit: String(limit),
   };
   if (filters.q) params.q = filters.q;
-  if (filters.bodyPart) params.body_part = filters.bodyPart;
   if (filters.category) params.category = filters.category;
   if (filters.equipment) params.equipment = filters.equipment;
-  if (filters.muscleGroup) params.muscle_group = filters.muscleGroup;
   if (filters.target) params.target = filters.target;
   return params;
 }

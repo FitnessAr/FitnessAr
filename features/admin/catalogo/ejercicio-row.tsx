@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ToggleSwitch } from "./toggle-switch";
+import { formatLabel } from "./filter-labels";
 import type { CatalogExercise } from "./types";
 
 // Fila del catálogo (vista lista): miniatura + nombre + músculo/equipo + interruptor.
@@ -43,8 +44,12 @@ export function EjercicioRow({
           {exercise.name}
         </Link>
         <p className="truncate text-xs text-ink-muted">
-          {exercise.target ?? exercise.muscleGroup ?? "—"}
-          {exercise.equipment ? ` · ${exercise.equipment}` : ""}
+          {exercise.target
+            ? formatLabel(exercise.target)
+            : exercise.muscleGroup
+              ? formatLabel(exercise.muscleGroup)
+              : "—"}
+          {exercise.equipment ? ` · ${formatLabel(exercise.equipment)}` : ""}
         </p>
       </div>
 

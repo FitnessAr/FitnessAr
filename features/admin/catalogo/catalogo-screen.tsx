@@ -42,6 +42,7 @@ import type {
   CatalogoEstado,
   CatalogoFilters,
 } from "./types";
+import { CATEGORY_TARGETS, formatLabel } from "./filter-labels";
 
 const ESTADO_PILLS: { key: CatalogoEstado; label: string }[] = [
   { key: "todos", label: "Todos" },
@@ -49,23 +50,16 @@ const ESTADO_PILLS: { key: CatalogoEstado; label: string }[] = [
   { key: "excluidos", label: "No incluidos" },
 ];
 
-type FilterField =
-  | "bodyPart"
-  | "category"
-  | "equipment"
-  | "muscleGroup"
-  | "target";
+type FilterField = "category" | "equipment" | "target";
 
 const SELECT_DEFS: {
   field: FilterField;
   metaKey: keyof CatalogoData["meta"];
   placeholder: string;
 }[] = [
-  { field: "bodyPart", metaKey: "body_part", placeholder: "Parte del cuerpo" },
   { field: "category", metaKey: "category", placeholder: "Categoría" },
+  { field: "target", metaKey: "target", placeholder: "Músculo objetivo" },
   { field: "equipment", metaKey: "equipment", placeholder: "Equipo" },
-  { field: "muscleGroup", metaKey: "muscle_group", placeholder: "Grupo muscular" },
-  { field: "target", metaKey: "target", placeholder: "Objetivo" },
 ];
 
 const BATCH_FLUSH_SIZE = 5;
@@ -78,10 +72,8 @@ type NavMode = "filters" | "page" | null;
 function buildQuery(filters: CatalogoFilters): string {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
-  if (filters.bodyPart) params.set("cuerpo", filters.bodyPart);
   if (filters.category) params.set("categoria", filters.category);
   if (filters.equipment) params.set("equipo", filters.equipment);
-  if (filters.muscleGroup) params.set("grupo", filters.muscleGroup);
   if (filters.target) params.set("objetivo", filters.target);
   if (filters.estado !== "todos") params.set("estado", filters.estado);
   if (filters.vista !== "cards") params.set("vista", filters.vista);
@@ -327,10 +319,8 @@ export function CatalogoScreen({
     setSearchDraft("");
     update({
       q: "",
-      bodyPart: "",
       category: "",
       equipment: "",
-      muscleGroup: "",
       target: "",
       estado: "todos",
     });
@@ -441,18 +431,39 @@ export function CatalogoScreen({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {SELECT_DEFS.map((def) => {
-          const options = data?.meta[def.metaKey] ?? [];
+          const allOptions = data?.meta[def.metaKey] ?? [];
+          const allowedTargets =
+            def.field === "target" && viewFilters.category
+              ? CATEGORY_TARGETS[viewFilters.category]
+              : undefined;
+          const options = allowedTargets
+            ? allOptions.filter((option) =>
+                allowedTargets.includes(option.value)
+              )
+            : allOptions;
           return (
             <div key={def.field} className="relative">
               <select
                 value={viewFilters[def.field]}
-                onChange={(event) =>
-                  update({
-                    [def.field]: event.target.value,
-                  } as Partial<CatalogoFilters>)
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (def.field === "category") {
+                    const patch: Partial<CatalogoFilters> = { category: value };
+                    const allowed = value ? CATEGORY_TARGETS[value] : undefined;
+                    if (
+                      allowed &&
+                      viewFilters.target &&
+                      !allowed.includes(viewFilters.target)
+                    ) {
+                      patch.target = "";
+                    }
+                    update(patch);
+                    return;
+                  }
+                  update({ [def.field]: value } as Partial<CatalogoFilters>);
+                }}
                 aria-label={def.placeholder}
                 className={`min-h-11 w-full appearance-none truncate rounded-2xl border bg-surface px-3 pr-8 text-xs font-bold text-ink outline-none transition-colors focus:border-brand/60 ${
                   viewFilters[def.field] ? "border-brand/60" : "border-border"
@@ -461,7 +472,7 @@ export function CatalogoScreen({
                 <option value="">{def.placeholder}</option>
                 {options.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.value} ({option.count})
+                    {formatLabel(option.value)}
                   </option>
                 ))}
               </select>

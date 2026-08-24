@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { ToggleSwitch } from "./toggle-switch";
+import { formatLabel } from "./filter-labels";
 import type { CatalogExercise } from "./types";
 
 // Card del catálogo (vista grilla): gif + nombre + músculo principal + equipo + interruptor.
@@ -53,12 +54,18 @@ export function EjercicioCard({
           {exercise.name}
         </Link>
         <p className="truncate text-xs text-ink-muted">
-          {exercise.target ?? exercise.muscleGroup ?? "—"}
+          {exercise.target
+            ? formatLabel(exercise.target)
+            : exercise.muscleGroup
+              ? formatLabel(exercise.muscleGroup)
+              : "—"}
         </p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
           <span className="truncate rounded-full bg-surface-elevated px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-            {exercise.equipment ?? "sin equipo"}
+            {exercise.equipment
+              ? formatLabel(exercise.equipment)
+              : "sin equipo"}
           </span>
           <ToggleSwitch
             checked={included}

@@ -30,10 +30,8 @@ export type CatalogMeta = {
 // Filtros activos, parseados de searchParams en la página y reenviados acá.
 export type CatalogoFilters = {
   q: string;
-  bodyPart: string;
   category: string;
   equipment: string;
-  muscleGroup: string;
   target: string;
   estado: CatalogoEstado;
   vista: CatalogoVista;

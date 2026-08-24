@@ -24,10 +24,8 @@ function parseFilters(
 
   return {
     q: firstValue(searchParams.q).trim().slice(0, 100),
-    bodyPart: firstValue(searchParams.cuerpo),
     category: firstValue(searchParams.categoria),
     equipment: firstValue(searchParams.equipo),
-    muscleGroup: firstValue(searchParams.grupo),
     target: firstValue(searchParams.objetivo),
     estado: ESTADOS.includes(estadoRaw as CatalogoEstado)
       ? (estadoRaw as CatalogoEstado)
