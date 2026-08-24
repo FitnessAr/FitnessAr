@@ -21,7 +21,7 @@ export default async function EjercicioDetallePage({
   const data = await getEjercicioDetalle(admin.branchId, catalogId);
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-5 px-6 pb-16 pt-8">
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-5 px-6 pb-16 pt-8 lg:max-w-4xl">
       <Link
         href="/admin/ejercicios"
         aria-label="Volver al catálogo"
