@@ -139,7 +139,7 @@ export function EjercicioFormScreen(props: FormScreenProps) {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8">
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8 lg:max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black uppercase leading-tight text-ink">
           {props.mode === "edit" ? "Editar ejercicio" : "Nuevo ejercicio"}
@@ -154,51 +154,57 @@ export function EjercicioFormScreen(props: FormScreenProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <MediaPicker value={gifUrl} onChange={setGifUrl} />
+        <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-6">
+          <MediaPicker value={gifUrl} onChange={setGifUrl} />
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
-            Nombre
-          </span>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            maxLength={255}
-            placeholder="Ej. Sentadilla búlgara con mancuernas"
-            className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none"
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
+              Nombre
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              maxLength={255}
+              placeholder="Ej. Sentadilla búlgara con mancuernas"
+              className="rounded-2xl border border-border bg-surface px-4 py-3.5 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-x-6">
+          <SelectField
+            label="Categoría"
+            value={category}
+            options={props.meta.category}
+            placeholder="Elegir categoría"
+            onChange={(value) => {
+              setCategory(value);
+              // El target elegido puede quedar fuera de la nueva categoría: resetearlo.
+              const allowed = value ? CATEGORY_TARGETS[value] : undefined;
+              if (allowed && target && !allowed.includes(target)) setTarget("");
+            }}
           />
-        </label>
 
-        <SelectField
-          label="Categoría"
-          value={category}
-          options={props.meta.category}
-          placeholder="Elegir categoría"
-          onChange={(value) => {
-            setCategory(value);
-            // El target elegido puede quedar fuera de la nueva categoría: resetearlo.
-            const allowed = value ? CATEGORY_TARGETS[value] : undefined;
-            if (allowed && target && !allowed.includes(target)) setTarget("");
-          }}
-        />
+          <SelectField
+            label="Equipo"
+            value={equipment}
+            options={props.meta.equipment}
+            placeholder="Elegir equipo"
+            onChange={setEquipment}
+          />
 
-        <SelectField
-          label="Equipo"
-          value={equipment}
-          options={props.meta.equipment}
-          placeholder="Elegir equipo"
-          onChange={setEquipment}
-        />
-
-        <SelectField
-          label="Músculo objetivo"
-          value={target}
-          options={targetOptions}
-          placeholder="Elegir músculo objetivo"
-          onChange={setTarget}
-        />
+          <div className="lg:col-span-2">
+            <SelectField
+              label="Músculo objetivo"
+              value={target}
+              options={targetOptions}
+              placeholder="Elegir músculo objetivo"
+              onChange={setTarget}
+            />
+          </div>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">

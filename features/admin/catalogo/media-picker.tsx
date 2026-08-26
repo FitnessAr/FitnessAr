@@ -95,7 +95,7 @@ export function MediaPicker({
       {shownImage ? (
         <div className="relative overflow-hidden rounded-2xl border border-border">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shownImage} alt="Imagen del ejercicio" className="h-40 w-full bg-surface-elevated object-contain" />
+          <img src={shownImage} alt="Imagen del ejercicio" className="h-40 w-full bg-surface-elevated object-contain lg:aspect-square lg:h-auto" />
           {!busy && (
             <button
               type="button"
@@ -113,7 +113,7 @@ export function MediaPicker({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-ink-muted transition-colors hover:border-brand/60 disabled:opacity-60"
+          className="flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-ink-muted transition-colors hover:border-brand/60 disabled:opacity-60 lg:aspect-square lg:min-h-0"
         >
           <ImagePlus className="h-6 w-6" />
           <span className="text-xs font-bold uppercase tracking-wide">
