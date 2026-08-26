@@ -5,7 +5,7 @@ import { CatalogoSkeleton } from "@/features/admin/catalogo/catalogo-skeleton";
 // desde una ficha. Replica el layout de la pantalla para que no haya saltos.
 export default function EjerciciosLoading() {
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 pb-28 pt-8">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 pt-8">
       <div aria-hidden className="flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="h-3 w-28 animate-pulse rounded-full bg-surface-elevated" />

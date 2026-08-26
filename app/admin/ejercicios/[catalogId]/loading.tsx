@@ -3,7 +3,7 @@
 // frío). Replica el layout de la página para que no haya saltos.
 export default function EjercicioDetalleLoading() {
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-5 px-6 pb-16 pt-8 lg:max-w-4xl">
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-5 px-6 pt-8 md:max-w-2xl lg:max-w-4xl">
       <div
         aria-hidden
         className="h-11 w-24 animate-pulse rounded-2xl bg-surface-elevated"

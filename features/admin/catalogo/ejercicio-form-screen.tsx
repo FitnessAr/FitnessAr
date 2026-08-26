@@ -139,7 +139,7 @@ export function EjercicioFormScreen(props: FormScreenProps) {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pb-28 pt-8 lg:max-w-3xl">
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-8 px-6 pt-8 lg:max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black uppercase leading-tight text-ink">
           {props.mode === "edit" ? "Editar ejercicio" : "Nuevo ejercicio"}

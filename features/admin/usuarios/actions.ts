@@ -20,6 +20,8 @@ export async function createUserAction(formData: FormData): Promise<CreateUserRe
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const role = String(formData.get("role") ?? "");
   const schedule = String(formData.get("schedule") ?? "").trim();
+  const image = String(formData.get("image") ?? "").trim() || null;
+  const bio = String(formData.get("bio") ?? "").trim() || null;
 
   if (!name || !loginId || !password || (role !== "ADMIN" && role !== "PROFESOR")) {
     return { ok: false, error: "Completá todos los campos obligatorios." };
@@ -46,6 +48,8 @@ export async function createUserAction(formData: FormData): Promise<CreateUserRe
         loginId,
         passwordHash,
         name,
+        image,
+        bio,
       },
     });
 
@@ -105,6 +109,48 @@ export async function deleteUserAction(userId: string): Promise<DeleteUserResult
   await prisma.user.delete({ where: { id: userId } });
 
   revalidatePath("/admin/usuarios");
+  return { ok: true };
+}
+
+export type UpdateUserProfileResult = { ok: true } | { ok: false; error: string };
+
+// Edición de perfil (nombre, imagen, bio, rol, horario) desde el panel admin.
+// El DNI no se puede cambiar (es el loginId, identificador de login).
+export async function updateUserProfileAction(
+  userId: string,
+  formData: FormData
+): Promise<UpdateUserProfileResult> {
+  await requireAdmin();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const role = String(formData.get("role") ?? "");
+  const image = String(formData.get("image") ?? "").trim() || null;
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+  const schedule = String(formData.get("schedule") ?? "").trim();
+
+  if (!name || (role !== "ADMIN" && role !== "PROFESOR")) {
+    return { ok: false, error: "Completá todos los campos obligatorios." };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { name, role, image, bio },
+    });
+
+    if (role === "PROFESOR") {
+      await tx.profesor.upsert({
+        where: { userId },
+        update: { schedule: schedule || null },
+        create: { userId, schedule: schedule || null },
+      });
+    } else if (role === "ADMIN") {
+      await tx.profesor.deleteMany({ where: { userId } });
+    }
+  });
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath(`/admin/usuarios/${userId}`);
   return { ok: true };
 }
 

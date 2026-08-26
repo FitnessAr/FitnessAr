@@ -218,7 +218,7 @@ export function CatalogoScreen({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 pb-28 pt-8">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-6 pt-8">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">

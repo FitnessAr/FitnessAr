@@ -44,7 +44,7 @@ export function BottomNav({ tabs }: { tabs: BottomNavTab[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 border-t border-border bg-background">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background">
       <div className="mx-auto flex w-full max-w-sm items-center justify-around px-2 py-2">
         {tabs.map((tab) => {
           const Icon = ICONS[tab.icon];

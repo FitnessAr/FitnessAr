@@ -5,7 +5,7 @@ export default async function ConfiguracionPage() {
   await requireAdmin();
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 pb-24 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center lg:max-w-2xl lg:mx-auto">
       <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink">
         Configuración
       </h1>

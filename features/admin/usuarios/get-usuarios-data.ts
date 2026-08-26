@@ -5,16 +5,20 @@ import type { AdminUserRow, UsuariosData } from "./types";
 // en CLAUDE.md (el alta de Cliente es un camino aparte, todavía sin definir).
 export async function getUsuariosData(): Promise<UsuariosData> {
   const users = await prisma.user.findMany({
-    where: { role: { in: ["ADMIN", "PROFESOR"] } },
+    where: { role: { in: ["ADMIN", "PROFESOR", "CLIENTE"] } },
     orderBy: { createdAt: "asc" },
+    include: { profesor: true },
   });
 
   const rows: AdminUserRow[] = users.map((user) => ({
     id: user.id,
     name: user.name,
     loginId: user.loginId,
-    role: user.role as "ADMIN" | "PROFESOR",
+    role: user.role as "ADMIN" | "PROFESOR" | "CLIENTE",
     isActive: !user.deactivatedAt,
+    image: user.image,
+    bio: user.bio,
+    schedule: user.profesor?.schedule ?? null,
   }));
 
   return {
@@ -23,6 +27,7 @@ export async function getUsuariosData(): Promise<UsuariosData> {
       total: rows.length,
       admins: rows.filter((row) => row.role === "ADMIN").length,
       profesores: rows.filter((row) => row.role === "PROFESOR").length,
+      clientes: rows.filter((row) => row.role === "CLIENTE").length,
     },
   };
 }
@@ -32,6 +37,7 @@ export async function getUsuariosData(): Promise<UsuariosData> {
 export async function getUserForEdit(id: string): Promise<AdminUserRow | null> {
   const user = await prisma.user.findFirst({
     where: { id, role: { in: ["ADMIN", "PROFESOR"] } },
+    include: { profesor: true },
   });
 
   if (!user) return null;
@@ -40,7 +46,10 @@ export async function getUserForEdit(id: string): Promise<AdminUserRow | null> {
     id: user.id,
     name: user.name,
     loginId: user.loginId,
-    role: user.role as "ADMIN" | "PROFESOR",
+    role: user.role as "ADMIN" | "PROFESOR" | "CLIENTE",
     isActive: !user.deactivatedAt,
+    image: user.image,
+    bio: user.bio,
+    schedule: user.profesor?.schedule ?? null,
   };
 }

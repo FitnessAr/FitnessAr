@@ -47,7 +47,7 @@ export default async function EditarEjercicioPage({
 
   if (!row) {
     return (
-      <div className="mx-auto flex w-full max-w-sm flex-col gap-4 px-6 pb-16 pt-8">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-4 px-6 pt-8 lg:max-w-3xl">
         <div className="rounded-2xl border border-dashed border-border p-6 text-center">
           <p className="text-sm font-bold text-ink">
             Este ejercicio no existe o no es editable.
