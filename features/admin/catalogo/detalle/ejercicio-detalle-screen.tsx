@@ -1,4 +1,4 @@
-import { formatLabel } from "../filter-labels";
+import { capitalizeWords, formatLabel } from "../filter-labels";
 import type { EjercicioDetalle } from "./types";
 
 // Ficha técnica del ejercicio: media + clasificación + musculatura + pasos.
@@ -20,6 +20,7 @@ export function EjercicioDetalleScreen({ detalle }: { detalle: EjercicioDetalle 
             <img
               src={media}
               alt={`Animación de ${detalle.name}`}
+              loading="lazy"
               className="aspect-square w-full object-cover"
             />
           ) : (
@@ -67,9 +68,9 @@ export function EjercicioDetalleScreen({ detalle }: { detalle: EjercicioDetalle 
               {detalle.secondaryMuscles.map((muscle) => (
                 <span
                   key={muscle}
-                  className="rounded-full bg-surface-elevated px-3 py-1.5 text-xs font-semibold capitalize text-ink"
+                  className="rounded-full bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-ink"
                 >
-                  {muscle}
+                  {capitalizeWords(muscle)}
                 </span>
               ))}
             </div>

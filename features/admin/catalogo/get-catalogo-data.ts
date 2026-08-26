@@ -113,7 +113,16 @@ export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
   const [exerciseRows, exercises, meta] = await Promise.all([
     prisma.exercise.findMany({
       where: { branchId },
-      select: { catalogId: true, isCustom: true },
+      select: {
+        catalogId: true,
+        isCustom: true,
+        name: true,
+        category: true,
+        equipment: true,
+        muscleGroup: true,
+        target: true,
+        gifUrl: true,
+      },
       orderBy: { createdAt: "asc" },
     }),
     fetchAllExercises(),
@@ -124,37 +133,11 @@ export async function getCatalogoData(branchId: string): Promise<CatalogoData> {
     ),
   ]);
 
-  // Customs + incluidos del catÃ¡logo en UNA query mÃ¡s (evita un segundo round-trip a la BD).
-  const customIds = new Set(
-    exerciseRows.filter((row) => row.isCustom).map((row) => row.catalogId)
-  );
-  // Los customs cuentan como incluidos: estÃ¡n materializados en la tabla local por definiciÃ³n
-  // (asÃ­ el filtro de estado y las pills los clasifican bien).
-  const includedIds = [
-    ...customIds,
-    ...exerciseRows
-      .filter((row) => !row.isCustom)
-      .map((row) => row.catalogId),
-  ];
+  const customs = exerciseRows
+    .filter((row) => row.isCustom)
+    .map(customRowToCatalogExercise);
 
-  let customs: CatalogExercise[] = [];
-  if (customIds.size > 0) {
-    customs = (
-      await prisma.exercise.findMany({
-        where: { branchId, catalogId: { in: [...customIds] } },
-        select: {
-          catalogId: true,
-          name: true,
-          category: true,
-          equipment: true,
-          muscleGroup: true,
-          target: true,
-          gifUrl: true,
-        },
-        orderBy: { createdAt: "desc" },
-      })
-    ).map(customRowToCatalogExercise);
-  }
+  const includedIds = exerciseRows.map((row) => row.catalogId);
 
   return {
     exercises: [...customs, ...exercises],

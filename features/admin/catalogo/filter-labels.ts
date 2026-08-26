@@ -6,6 +6,13 @@ export function formatLabel(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+export function capitalizeWords(value: string): string {
+  return value
+    .split(" ")
+    .map((w) => formatLabel(w))
+    .join(" ");
+}
+
 // Jerarquía categoría → músculos objetivo válidos, verificada contra la API viva.
 // Si una categoría no está acá, el select muestra todas las opciones.
 export const CATEGORY_TARGETS: Record<string, string[]> = {
