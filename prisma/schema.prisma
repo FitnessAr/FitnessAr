@@ -164,6 +164,9 @@ model Routine {
   profesorId String?           @map("profesor_id")
   name       String            @db.VarChar(255)
   difficulty Difficulty
+  // Mismo patrón que User.deactivatedAt: una rutina desactivada no se borra, solo desaparece de
+  // los listados de profesor/cliente — reversible desde el panel admin.
+  deactivatedAt DateTime?      @map("deactivated_at")
   branch     Branch            @relation(fields: [branchId], references: [id])
   profesor   Profesor?         @relation(fields: [profesorId], references: [id], onDelete: SetNull)
   days       RoutineDay[]
