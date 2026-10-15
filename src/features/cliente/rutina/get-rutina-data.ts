@@ -1,10 +1,9 @@
 import { getActiveRoutine } from "../active-routine";
 import { getCurrentWeekDays } from "../week";
-import type { Cliente } from "@/generated/prisma/client";
 import type { RutinaScreenData } from "./types";
 
-export async function getRutinaData(cliente: Cliente): Promise<RutinaScreenData> {
-  const routine = await getActiveRoutine(cliente);
+export async function getRutinaData(clienteId: string): Promise<RutinaScreenData> {
+  const routine = await getActiveRoutine(clienteId);
 
   if (!routine) {
     return null;

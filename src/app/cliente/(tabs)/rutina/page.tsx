@@ -4,6 +4,6 @@ import { RutinaScreen } from "@/features/cliente/rutina/rutina-screen";
 
 export default async function RutinaPage() {
   const { cliente } = await requireCliente();
-  const data = await getRutinaData(cliente);
+  const data = await getRutinaData(cliente.id);
   return <RutinaScreen data={data} />;
 }

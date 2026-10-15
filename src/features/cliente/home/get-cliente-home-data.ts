@@ -2,7 +2,7 @@ import { getActiveRoutine } from "../active-routine";
 import { getCurrentWeekDays } from "../week";
 import { WEEKDAY_NAMES_ES } from "../weekday-names";
 import { getTrainingHistory, computeCurrentStreak } from "../training-history";
-import type { Cliente, User } from "@/generated/prisma/client";
+import type { ClienteSessionUser, ClienteSessionCliente } from "../require-cliente";
 import type { ClienteHomeData, TodayWorkout } from "./types";
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -13,8 +13,11 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-export async function getClienteHomeData(user: User, cliente: Cliente): Promise<ClienteHomeData> {
-  const routine = await getActiveRoutine(cliente);
+export async function getClienteHomeData(
+  user: ClienteSessionUser,
+  cliente: ClienteSessionCliente
+): Promise<ClienteHomeData> {
+  const routine = await getActiveRoutine(cliente.id);
 
   if (!routine) {
     return { clientName: user.name, hasProfessor: false };

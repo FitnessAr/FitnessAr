@@ -1,6 +1,6 @@
-import type { User, Profesor } from "@/generated/prisma/client";
 import { getClientRoster } from "../roster";
 import { getBranchRoutines } from "../rutinas/get-branch-routines";
+import type { ProfesorSessionUser, ProfesorSessionProfesor } from "../require-profesor";
 import type { ProfesorHomeData } from "./types";
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -11,7 +11,10 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-export async function getProfesorHomeData(user: User, profesor: Profesor): Promise<ProfesorHomeData> {
+export async function getProfesorHomeData(
+  user: ProfesorSessionUser,
+  profesor: ProfesorSessionProfesor
+): Promise<ProfesorHomeData> {
   const [roster, branchRoutines] = await Promise.all([
     getClientRoster(profesor.id),
     getBranchRoutines(user.branchId),

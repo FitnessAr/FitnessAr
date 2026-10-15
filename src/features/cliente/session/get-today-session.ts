@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { getActiveRoutine } from "../active-routine";
 import { getPreviousSets } from "../previous-sets";
 import { WEEKDAY_NAMES_ES } from "../weekday-names";
-import type { Cliente } from "@/generated/prisma/client";
 import type { SessionData, SetLog } from "./types";
 
 function startOfDay(date: Date): Date {
@@ -14,12 +13,8 @@ function startOfDay(date: Date): Date {
 // Encuentra (o crea, la primera vez que el cliente entra hoy) la TrainingSession de hoy, con sus
 // SessionExercise/SessionSet anidados precargados desde la rutina real. Idempotente: recargar la
 // página no duplica nada, solo recupera lo que ya existe.
-export async function getTodaySession(cliente: Cliente): Promise<SessionData> {
-  if (!cliente.routineId) {
-    return null;
-  }
-
-  const routine = await getActiveRoutine(cliente);
+export async function getTodaySession(clienteId: string): Promise<SessionData> {
+  const routine = await getActiveRoutine(clienteId);
   if (!routine) {
     return null;
   }
@@ -31,7 +26,7 @@ export async function getTodaySession(cliente: Cliente): Promise<SessionData> {
   }
 
   const routineDay = await prisma.routineDay.findUnique({
-    where: { routineId_weekday: { routineId: cliente.routineId, weekday: today.getDay() } },
+    where: { routineId_weekday: { routineId: routine.routineId, weekday: today.getDay() } },
     include: { exercises: { orderBy: { order: "asc" } } },
   });
   if (!routineDay) {
@@ -41,7 +36,7 @@ export async function getTodaySession(cliente: Cliente): Promise<SessionData> {
   const todayStart = startOfDay(today);
 
   let session = await prisma.trainingSession.findFirst({
-    where: { clienteId: cliente.id, routineDayId: routineDay.id, date: todayStart },
+    where: { clienteId, routineDayId: routineDay.id, date: todayStart },
     include: { exercises: { include: { sets: { orderBy: { setIndex: "asc" } } } } },
   });
 
@@ -49,7 +44,7 @@ export async function getTodaySession(cliente: Cliente): Promise<SessionData> {
     const seeds = await Promise.all(
       routineDay.exercises.map((routineExercise) =>
         getPreviousSets(
-          cliente.id,
+          clienteId,
           routineExercise.exerciseId,
           routineExercise.sets,
           routineExercise.reps
@@ -59,8 +54,8 @@ export async function getTodaySession(cliente: Cliente): Promise<SessionData> {
 
     session = await prisma.trainingSession.create({
       data: {
-        clienteId: cliente.id,
-        routineId: cliente.routineId,
+        clienteId,
+        routineId: routine.routineId,
         routineDayId: routineDay.id,
         date: todayStart,
         weekday: today.getDay(),

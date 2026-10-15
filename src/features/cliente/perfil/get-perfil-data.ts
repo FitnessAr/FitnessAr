@@ -1,6 +1,6 @@
 import { getActiveRoutine } from "../active-routine";
 import { WEEKDAY_NAMES_ES } from "../weekday-names";
-import type { Cliente, User } from "@/generated/prisma/client";
+import type { ClienteSessionUser, ClienteSessionCliente } from "../require-cliente";
 import type { ClientePerfilData } from "./types";
 
 function formatMemberSince(date: Date): string {
@@ -19,8 +19,11 @@ function getNextTrainingWeekday(scheduleWeekdays: number[], today: Date): number
   return today.getDay();
 }
 
-export async function getClientePerfilData(user: User, cliente: Cliente): Promise<ClientePerfilData> {
-  const routine = await getActiveRoutine(cliente);
+export async function getClientePerfilData(
+  user: ClienteSessionUser,
+  cliente: ClienteSessionCliente
+): Promise<ClientePerfilData> {
+  const routine = await getActiveRoutine(cliente.id);
 
   if (!routine) {
     return { hasProfessor: false, clientName: user.name };

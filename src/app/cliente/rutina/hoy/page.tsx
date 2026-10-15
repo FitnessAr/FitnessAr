@@ -6,12 +6,12 @@ import { SessionScreen } from "@/features/cliente/session/session-screen";
 
 export default async function SessionPage() {
   const { cliente } = await requireCliente();
-  const routine = await getActiveRoutine(cliente);
+  const routine = await getActiveRoutine(cliente.id);
 
   if (!routine) {
     redirect("/cliente");
   }
 
-  const session = await getTodaySession(cliente);
+  const session = await getTodaySession(cliente.id);
   return <SessionScreen session={session} />;
 }

@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/db";
 import { formatArgentinaTime } from "@/lib/format-ar-time";
-import type { User } from "@/generated/prisma/client";
+import type { AdminSession } from "@/features/admin/require-admin";
 import type { UsuarioTabData } from "./types";
 
 // Recibe el admin ya resuelto por requireAdmin() en vez de volver a buscarlo.
-export async function getUsuarioTabData(admin: User): Promise<UsuarioTabData> {
+export async function getUsuarioTabData(
+  admin: Pick<AdminSession, "branchId" | "name" | "loginId">
+): Promise<UsuarioTabData> {
   const profesores = await prisma.user.findMany({
     where: { branchId: admin.branchId, role: "PROFESOR", deactivatedAt: null },
     orderBy: { name: "asc" },

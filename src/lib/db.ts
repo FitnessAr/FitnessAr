@@ -8,7 +8,16 @@ import { PrismaClient } from "@/generated/prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    // Sin esto, el pool de `pg` usa su default (idleTimeoutMillis ~10s): en dev, con más de ~10s
+    // entre clics, cada navegación reabre una conexión TCP+TLS nueva contra el pooler de Supabase
+    // (en nuestro caso, ~200ms de RTT solo de ida y vuelta) antes de poder correr la primera query.
+    // Subir la ventana de inactividad deja la conexión viva entre requests típicos de una sesión.
+    max: 5,
+    idleTimeoutMillis: 5 * 60 * 1000,
+    keepAlive: true,
+  });
   return new PrismaClient({ adapter });
 }
 

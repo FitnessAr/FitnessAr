@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { getPreviousSets } from "./previous-sets";
-import type { Cliente } from "@/generated/prisma/client";
 
 export type ExerciseSummary = {
   name: string;
@@ -26,6 +25,7 @@ export type RoutineTemplate = {
 };
 
 export type ActiveRoutine = RoutineTemplate & {
+  routineId: string;
   assignedBy: string;
   assignedSince: Date;
   memberSince: Date;
@@ -45,8 +45,17 @@ function formatReps(reps: number, unit: string): string {
 // rutina asignada. Reemplaza al viejo mock (features/routines/catalog.ts + features/clients/
 // roster.ts, ambos borrados) — mantiene los mismos tipos (ActiveRoutine/DayWorkout/
 // ExerciseSummary) para no tocar los componentes de presentación de Home/Rutina/Perfil/Session.
-export async function getActiveRoutine(cliente: Cliente): Promise<ActiveRoutine | null> {
-  if (!cliente.profesorId || !cliente.routineId) {
+//
+// Recibe solo el id (no el Cliente completo): profesorId/routineId/memberSince son datos de
+// negocio que cambian seguido (un profesor asigna/reasigna en cualquier momento), así que siempre
+// se leen frescos acá en vez de viajar en los claims de la sesión (ver require-cliente.ts).
+export async function getActiveRoutine(clienteId: string): Promise<ActiveRoutine | null> {
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: clienteId },
+    select: { profesorId: true, routineId: true, memberSince: true, routineAssignedAt: true },
+  });
+
+  if (!cliente?.profesorId || !cliente.routineId) {
     return null;
   }
 
@@ -78,7 +87,7 @@ export async function getActiveRoutine(cliente: Cliente): Promise<ActiveRoutine 
         muscleGroup: routineExercise.exercise.muscleGroup ?? "General",
         restSeconds: routineExercise.restSeconds,
         previousSets: await getPreviousSets(
-          cliente.id,
+          clienteId,
           routineExercise.exerciseId,
           routineExercise.sets,
           routineExercise.reps
@@ -95,6 +104,7 @@ export async function getActiveRoutine(cliente: Cliente): Promise<ActiveRoutine 
   }
 
   return {
+    routineId: cliente.routineId,
     name: routine.name,
     difficulty: DIFFICULTY_LABELS[routine.difficulty] ?? routine.difficulty,
     scheduleWeekdays,

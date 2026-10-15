@@ -5,10 +5,11 @@ export const SESSION_COOKIE_NAME = "fitnessar_demo_identity";
 
 // El valor de la cookie indica de qué "espacio" de identidad viene: `demo:<key>` (formato
 // heredado de las cuentas mock que ya se sacaron del login, ver CLAUDE.md — nada lo escribe más,
-// pero `decodeSessionCookie` lo sigue reconociendo por compatibilidad) o `real:<userId>.<firma>`
-// para un User real de la base.
-export function encodeRealUserId(userId: string): string {
-  return `real:${userId}`;
+// pero `decodeSessionCookie` lo sigue reconociendo por compatibilidad) o `real:<payload>.<firma>`
+// para un User real de la base, donde `payload` es un SessionClaims (ver session-claims.ts)
+// serializado en base64url.
+export function encodeRealPayload(payload: string): string {
+  return `real:${payload}`;
 }
 
 export type DecodedSession =

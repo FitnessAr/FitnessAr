@@ -4,6 +4,6 @@ import { ProgresoScreen } from "@/features/cliente/progreso/progreso-screen";
 
 export default async function ProgresoPage() {
   const { cliente } = await requireCliente();
-  const data = await getProgresoData(cliente);
+  const data = await getProgresoData(cliente.id);
   return <ProgresoScreen data={data} />;
 }

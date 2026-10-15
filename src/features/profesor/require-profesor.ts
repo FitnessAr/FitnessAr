@@ -1,20 +1,41 @@
 import { redirect } from "next/navigation";
-import { getCurrentRealUserId } from "@/features/auth/session";
-import { prisma } from "@/lib/db";
+import {
+  buildSessionClaims,
+  getCurrentSessionClaims,
+  isClaimsFresh,
+  refreshSessionClaims,
+} from "@/features/auth/session";
+
+export type ProfesorSessionUser = { id: string; branchId: string; name: string };
+export type ProfesorSessionProfesor = { id: string };
 
 // Guarda compartida por todo /profesor: exige una sesión real (no de demo) con rol PROFESOR,
-// cuenta activa, y una fila Profesor asociada. Cualquier otro caso vuelve al login — mismo
-// patrón que features/admin/require-admin.ts (requireAdmin()).
-export async function requireProfesor() {
-  const userId = await getCurrentRealUserId();
-  if (!userId) {
+// cuenta activa, y una fila Profesor asociada. Mismo patrón de claims + revalidación cada 2h que
+// features/admin/require-admin.ts (requireAdmin()) — ver ahí el detalle de la ventana de confianza.
+export async function requireProfesor(): Promise<{
+  user: ProfesorSessionUser;
+  profesor: ProfesorSessionProfesor;
+}> {
+  const claims = await getCurrentSessionClaims();
+  if (!claims || claims.role !== "PROFESOR") {
     redirect("/");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { profesor: true } });
-  if (!user || user.role !== "PROFESOR" || user.deactivatedAt || !user.profesor) {
+  if (claims.active && claims.profesorId && isClaimsFresh(claims)) {
+    return {
+      user: { id: claims.userId, branchId: claims.branchId, name: claims.name },
+      profesor: { id: claims.profesorId },
+    };
+  }
+
+  const fresh = await buildSessionClaims(claims.userId);
+  if (!fresh || fresh.role !== "PROFESOR" || !fresh.active || !fresh.profesorId) {
     redirect("/");
   }
 
-  return { user, profesor: user.profesor };
+  await refreshSessionClaims(fresh);
+  return {
+    user: { id: fresh.userId, branchId: fresh.branchId, name: fresh.name },
+    profesor: { id: fresh.profesorId },
+  };
 }

@@ -7,7 +7,6 @@ import {
   computeCurrentStreak,
   type LoggedDay,
 } from "../training-history";
-import type { Cliente } from "@/generated/prisma/client";
 import type { PersonalRecord, ProgresoData } from "./types";
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -82,15 +81,15 @@ async function countCompletedExercisesToday(clienteId: string): Promise<number> 
   ).length;
 }
 
-export async function getProgresoData(cliente: Cliente): Promise<ProgresoData> {
-  const routine = await getActiveRoutine(cliente);
+export async function getProgresoData(clienteId: string): Promise<ProgresoData> {
+  const routine = await getActiveRoutine(clienteId);
 
   if (!routine) {
     return { hasProfessor: false };
   }
 
   const today = new Date();
-  const log = await getTrainingHistory(cliente.id);
+  const log = await getTrainingHistory(clienteId);
 
   const weekDays = getCurrentWeekDays(routine.scheduleWeekdays, today).map((day) => ({
     ...day,
@@ -100,7 +99,7 @@ export async function getProgresoData(cliente: Cliente): Promise<ProgresoData> {
   const completedThisMonth = log.filter((day) => day.completed && isSameMonth(day.date, today));
 
   const todayWorkout = routine.workoutsByWeekday[today.getDay()] ?? null;
-  const completedToday = todayWorkout ? await countCompletedExercisesToday(cliente.id) : 0;
+  const completedToday = todayWorkout ? await countCompletedExercisesToday(clienteId) : 0;
 
   return {
     hasProfessor: true,
